@@ -1,4 +1,4 @@
-function findInputByName(name: string): HTMLElement | null {
+function findInputByName(name: string, searchInModal: boolean = true): HTMLElement | null {
   const selectors = [
     `input[name="${name}"]`,
     `select[name="${name}"]`,
@@ -10,7 +10,7 @@ function findInputByName(name: string): HTMLElement | null {
     `[id*="${name}"]`,
   ];
 
-  const modal = document.querySelector('#create-modal');
+  const modal = searchInModal ? document.querySelector('#create-modal') : null;
   const searchScope = modal || document;
 
   for (const selector of selectors) {
@@ -70,6 +70,51 @@ function findInputByName(name: string): HTMLElement | null {
       'ad',
       'ad_name',
       'adName',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'campaignOperationStatus') {
+    console.log(`[UAM Form Filler] Searching for campaignOperationStatus alternatives...`);
+    const alternatives = [
+      'operationStatus',
+      'operation_status',
+      'status',
+      'campaignStatus',
+      'campaign_status',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'campaignLifetimeBudget') {
+    console.log(`[UAM Form Filler] Searching for campaignLifetimeBudget alternatives...`);
+    const alternatives = [
+      'lifetimeBudget',
+      'lifetime_budget',
+      'budget',
+      'campaignBudget',
+      'campaign_budget',
+      'lifetimeBudgetAmount',
     ];
     
     for (const altName of alternatives) {
@@ -507,11 +552,314 @@ function setInputValue(element: HTMLElement, value: any): boolean {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       } else if (inputType === 'number') {
-        input.value = String(value);
+        const valueToSet = String(value);
+        // Use native setter to bypass React's controlled component
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, valueToSet);
+        } else {
+          input.value = valueToSet;
+        }
+        
+        // Trigger React events
+        input.focus();
+        const inputEvent = new Event('input', { bubbles: true, cancelable: true });
+        const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+        Object.defineProperty(inputEvent, 'target', { value: input, enumerable: true });
+        Object.defineProperty(changeEvent, 'target', { value: input, enumerable: true });
+        input.dispatchEvent(inputEvent);
+        input.dispatchEvent(changeEvent);
+        input.blur();
       } else {
-        input.value = String(value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        // Text input - simulate typing character by character to trigger React handlers
+        const valueToSet = String(value);
+        console.log(`[UAM Form Filler] Setting text input value to: "${valueToSet}"`);
+        
+        // Focus and clear the input
+        input.focus();
+        input.select();
+        
+        // Try to find React Fiber using getOwnPropertyNames (non-enumerable keys)
+        console.log(`[UAM Form Filler] Searching for React Fiber using getOwnPropertyNames...`);
+        let elementToCheck: HTMLElement | null = input;
+        for (let i = 0; i < 10 && elementToCheck; i++) {
+          const allProps = Object.getOwnPropertyNames(elementToCheck);
+          const reactKeys = allProps.filter(key => 
+            key.startsWith('__reactFiber') || 
+            key.startsWith('__reactInternalInstance') ||
+            key.startsWith('__reactContainer')
+          );
+          
+          if (reactKeys.length > 0) {
+            console.log(`[UAM Form Filler] Found React keys at level ${i}:`, reactKeys);
+            const reactKey = reactKeys[0];
+            const fiber = (elementToCheck as any)[reactKey];
+            
+            if (fiber) {
+              console.log(`[UAM Form Filler] Found React Fiber! Searching for onBlur...`);
+              // Search for onBlur handler
+              let node = fiber;
+              for (let j = 0; j < 20 && node; j++) {
+                if (node.memoizedProps && typeof node.memoizedProps.onBlur === 'function') {
+                  console.log(`[UAM Form Filler] Found onBlur handler! Calling it...`);
+                  // Create synthetic event
+                  const syntheticEvent = {
+                    target: input,
+                    currentTarget: input,
+                    type: 'blur',
+                    bubbles: true,
+                    cancelable: true,
+                    nativeEvent: new FocusEvent('blur', { bubbles: true, cancelable: true }),
+                    isDefaultPrevented: () => false,
+                    isPropagationStopped: () => false,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    persist: () => {}
+                  };
+                  // Ensure target.value is set
+                  Object.defineProperty(syntheticEvent.target, 'value', { 
+                    value: valueToSet, 
+                    writable: true, 
+                    configurable: true 
+                  });
+                  node.memoizedProps.onBlur(syntheticEvent);
+                  console.log(`[UAM Form Filler] Called onBlur handler directly with value: "${valueToSet}"`);
+                  break;
+                }
+                // Also check for setValues
+                if (node.memoizedProps && typeof node.memoizedProps.setValues === 'function') {
+                  console.log(`[UAM Form Filler] Found setValues! Calling it...`);
+                  node.memoizedProps.setValues(() => ({ name: valueToSet }), { onDone: () => {} });
+                  console.log(`[UAM Form Filler] Called setValues with value: "${valueToSet}"`);
+                  break;
+                }
+                node = node.return;
+              }
+              break;
+            }
+          }
+          
+          elementToCheck = elementToCheck.parentElement;
+        }
+        
+        if (!elementToCheck) {
+          console.log(`[UAM Form Filler] No React Fiber found in parent chain`);
+        }
+        
+        // The component uses react-hook-form, so we need to update the form state
+        // Try to find react-hook-form's form instance via the input's name
+        const inputName = input.name || input.getAttribute('name') || input.id;
+        console.log(`[UAM Form Filler] Input name: "${inputName}"`);
+        
+        // react-hook-form stores form state - try to find FormProvider
+        const formElement = input.closest('form');
+        if (formElement) {
+          console.log(`[UAM Form Filler] Found form element, searching for react-hook-form...`);
+          const formProps = Object.getOwnPropertyNames(formElement);
+          const formReactKey = formProps.find(key => key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance'));
+          if (formReactKey) {
+            console.log(`[UAM Form Filler] Found React on form`);
+            const formFiber = (formElement as any)[formReactKey];
+            // Search for react-hook-form's FormProvider
+            let node = formFiber;
+            for (let i = 0; i < 30 && node; i++) {
+              if (node.memoizedProps) {
+                const props = node.memoizedProps;
+                // Check if this is a FormProvider (react-hook-form)
+                if (props.value && typeof props.value.setValue === 'function') {
+                  console.log(`[UAM Form Filler] Found react-hook-form setValue!`);
+                  props.value.setValue(inputName, valueToSet, { shouldValidate: false, shouldDirty: true });
+                  console.log(`[UAM Form Filler] Called react-hook-form setValue for "${inputName}"`);
+                  break;
+                }
+              }
+              node = node.return;
+            }
+          }
+        }
+        
+        // Wait for focus, then set value using methods React recognizes
+        setTimeout(() => {
+          // Try using setRangeText which React might recognize better
+          try {
+            input.focus();
+            input.setSelectionRange(0, input.value.length);
+            input.setRangeText(valueToSet, 0, input.value.length, 'end');
+            console.log(`[UAM Form Filler] Used setRangeText to set value`);
+            
+            // Trigger events
+            const inputEvent = new InputEvent('input', {
+              bubbles: true,
+              cancelable: true,
+              inputType: 'insertText',
+              data: valueToSet
+            });
+            Object.defineProperty(inputEvent, 'target', { value: input, enumerable: true });
+            Object.defineProperty(inputEvent, 'currentTarget', { value: input, enumerable: true });
+            input.dispatchEvent(inputEvent);
+            
+            // Wait for input to process
+            setTimeout(() => {
+              const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+              Object.defineProperty(changeEvent, 'target', { value: input, enumerable: true });
+              Object.defineProperty(changeEvent, 'currentTarget', { value: input, enumerable: true });
+              input.dispatchEvent(changeEvent);
+              
+              // Wait longer for React to process, then blur
+              setTimeout(() => {
+                // Ensure value is still set
+                if (input.value !== valueToSet) {
+                  input.setRangeText(valueToSet, 0, input.value.length, 'end');
+                }
+                
+                console.log(`[UAM Form Filler] Value before blur: "${input.value}"`);
+                
+                // Try focusout first (sometimes React listens to this instead of blur)
+                const focusoutEvent = new FocusEvent('focusout', {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window,
+                  relatedTarget: document.body
+                });
+                Object.defineProperty(focusoutEvent, 'target', { value: input, enumerable: true });
+                Object.defineProperty(focusoutEvent, 'currentTarget', { value: input, enumerable: true });
+                input.dispatchEvent(focusoutEvent);
+                
+                // Then blur
+                input.blur();
+                const blurEvent = new FocusEvent('blur', {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window,
+                  relatedTarget: document.body
+                });
+                Object.defineProperty(blurEvent, 'target', { value: input, enumerable: true });
+                Object.defineProperty(blurEvent, 'currentTarget', { value: input, enumerable: true });
+                input.dispatchEvent(blurEvent);
+                
+                // Also click outside to ensure blur happens naturally
+                setTimeout(() => {
+                  document.body.click();
+                  console.log(`[UAM Form Filler] Dispatched blur after setRangeText. Final value: "${input.value}"`);
+                }, 50);
+              }, 300);
+            }, 100);
+            
+            return; // Exit early if setRangeText worked
+          } catch (e) {
+            console.log(`[UAM Form Filler] setRangeText failed, falling back to typing: ${e}`);
+          }
+          
+          // Fallback: Clear the input and type character by character
+          input.value = '';
+          
+          // Type each character with proper events
+          const typeCharacter = (index: number) => {
+            if (index >= valueToSet.length) {
+              // Finished typing, wait then blur
+              setTimeout(() => {
+                // Ensure value is set
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                if (nativeInputValueSetter) {
+                  nativeInputValueSetter.call(input, valueToSet);
+                } else {
+                  input.value = valueToSet;
+                }
+                
+                // Trigger change event before blur
+                const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+                Object.defineProperty(changeEvent, 'target', { value: input, enumerable: true });
+                input.dispatchEvent(changeEvent);
+                
+                // Wait a bit for change to process
+                setTimeout(() => {
+                  // Click outside to trigger blur naturally
+                  const clickOutside = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    clientX: 0,
+                    clientY: 0
+                  });
+                  document.body.dispatchEvent(clickOutside);
+                  
+                  // Also dispatch blur
+                  input.blur();
+                  const blurEvent = new FocusEvent('blur', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                  });
+                  Object.defineProperty(blurEvent, 'target', { value: input, enumerable: true });
+                  input.dispatchEvent(blurEvent);
+                  
+                  console.log(`[UAM Form Filler] Finished typing and blurred. Final value: "${input.value}"`);
+                }, 150);
+              }, 100);
+              return;
+            }
+            
+            const char = valueToSet[index];
+            const currentValue = valueToSet.substring(0, index + 1);
+            
+            // Set value
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+            if (nativeInputValueSetter) {
+              nativeInputValueSetter.call(input, currentValue);
+            } else {
+              input.value = currentValue;
+            }
+            
+            // Dispatch keyboard and input events for this character
+            const keydownEvent = new KeyboardEvent('keydown', {
+              bubbles: true,
+              cancelable: true,
+              key: char,
+              code: char === ' ' ? 'Space' : `Key${char.toUpperCase()}`,
+              keyCode: char.charCodeAt(0),
+              which: char.charCodeAt(0)
+            });
+            
+            const keypressEvent = new KeyboardEvent('keypress', {
+              bubbles: true,
+              cancelable: true,
+              key: char,
+              code: char === ' ' ? 'Space' : `Key${char.toUpperCase()}`,
+              keyCode: char.charCodeAt(0),
+              charCode: char.charCodeAt(0),
+              which: char.charCodeAt(0)
+            });
+            
+            const inputEvent = new InputEvent('input', {
+              bubbles: true,
+              cancelable: true,
+              inputType: 'insertText',
+              data: char
+            });
+            Object.defineProperty(inputEvent, 'target', { value: input, enumerable: true });
+            Object.defineProperty(inputEvent, 'currentTarget', { value: input, enumerable: true });
+            
+            const keyupEvent = new KeyboardEvent('keyup', {
+              bubbles: true,
+              cancelable: true,
+              key: char,
+              code: char === ' ' ? 'Space' : `Key${char.toUpperCase()}`,
+              keyCode: char.charCodeAt(0),
+              which: char.charCodeAt(0)
+            });
+            
+            input.dispatchEvent(keydownEvent);
+            input.dispatchEvent(keypressEvent);
+            input.dispatchEvent(inputEvent);
+            input.dispatchEvent(keyupEvent);
+            
+            // Continue with next character
+            setTimeout(() => typeCharacter(index + 1), 20);
+          };
+          
+          // Start typing
+          typeCharacter(0);
+        }, 50);
       }
       
     } else if (tagName === 'select') {
@@ -857,5 +1205,306 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
 
   console.log('[UAM Form Filler] Form filled successfully');
   console.log('[UAM Form Filler] Final Form Data:', formData);
+  return { success: true };
+}
+
+function isFieldEnabled(element: HTMLElement): boolean {
+  if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+    const input = element as HTMLInputElement | HTMLTextAreaElement;
+    return !input.disabled && !input.readOnly;
+  }
+  
+  if (element.tagName === 'SELECT') {
+    const select = element as HTMLSelectElement;
+    return !select.disabled;
+  }
+  
+  // For custom components, check if parent is disabled
+  const parent = element.closest('[disabled], [aria-disabled="true"]');
+  return !parent;
+}
+
+function getFieldValue(element: HTMLElement): string {
+  if (element.tagName === 'INPUT') {
+    const input = element as HTMLInputElement;
+    if (input.type === 'checkbox' || input.type === 'radio') {
+      return input.checked ? 'checked' : 'unchecked';
+    }
+    return input.value || '';
+  }
+  
+  if (element.tagName === 'SELECT') {
+    const select = element as HTMLSelectElement;
+    return select.value || '';
+  }
+  
+  if (element.tagName === 'TEXTAREA') {
+    const textarea = element as HTMLTextAreaElement;
+    return textarea.value || '';
+  }
+  
+  // For custom components, try to get text content
+  return element.textContent?.trim() || '';
+}
+
+function isEmptyOrDefault(value: string, fieldName: string): boolean {
+  if (!value || value.trim() === '') {
+    return true;
+  }
+  
+  // Check for default values
+  const trimmedValue = value.trim();
+  const lowerValue = trimmedValue.toLowerCase();
+  
+  // Budget field defaults - check various formats including whitespace
+  if (fieldName.includes('budget') || fieldName.includes('lifetime') || fieldName.includes('spend')) {
+    // Remove all whitespace and currency symbols for comparison
+    const normalized = trimmedValue.replace(/\s/g, '').replace(/\$/g, '').replace(/,/g, '');
+    const normalizedLower = normalized.toLowerCase();
+    
+    // Check normalized value (without $ and spaces)
+    if (normalizedLower === '0.00' || normalizedLower === '0' || normalizedLower === '0.0') {
+      return true;
+    }
+    
+    // Check original value formats
+    if (lowerValue === '$0.00' || 
+        lowerValue === '0.00' || 
+        lowerValue === '$0' || 
+        lowerValue === '0' ||
+        trimmedValue === '$0.00' ||
+        trimmedValue === '$0' ||
+        trimmedValue === '0.00' ||
+        trimmedValue === '0') {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  // Other common defaults
+  return lowerValue === 'none' || lowerValue === 'select' || lowerValue === 'choose' || lowerValue === '--';
+}
+
+export function fillEditForm(formData: Record<string, any>): { success: boolean; error?: string } {
+  console.log('[UAM Form Filler] Filling edit form with data:', formData);
+
+  const errors: string[] = [];
+  const successes: string[] = [];
+  const skipped: string[] = [];
+
+  // Determine entity type from URL
+  const url = window.location.href;
+  const isCampaignEdit = url.includes('/campaigns/');
+  const isAdgroupEdit = url.includes('/adgroups/') || url.includes('/ad-groups/');
+  const isAdEdit = url.includes('/ads/');
+
+  console.log(`[UAM Form Filler] Edit page detected - Campaign: ${isCampaignEdit}, Adgroup: ${isAdgroupEdit}, Ad: ${isAdEdit}`);
+
+  // Log all available inputs on the page for debugging
+  const allInputs = document.querySelectorAll('input, select, textarea, [role="combobox"], [role="textbox"], [contenteditable="true"]');
+  console.log(`[UAM Form Filler] Found ${allInputs.length} potential input elements on edit page`);
+  allInputs.forEach((input, index) => {
+    const htmlInput = input as HTMLElement;
+    const nameAttr = htmlInput.getAttribute('name') || htmlInput.id || 'no-name';
+    const type = (htmlInput as HTMLInputElement).type || htmlInput.tagName.toLowerCase();
+    const value = getFieldValue(htmlInput);
+    const role = htmlInput.getAttribute('role') || 'none';
+    if (index < 30) { // Limit logging to first 30
+      console.log(`  ${index + 1}. name="${nameAttr}", type="${type}", id="${htmlInput.id}", role="${role}", value="${value.substring(0, 50)}"`);
+    }
+  });
+
+  // For campaign edit pages, fill campaign-specific fields
+  if (isCampaignEdit) {
+    const campaignFields = ['campaignName', 'campaignOperationStatus', 'campaignLifetimeBudget', 'objectiveType'];
+    
+    for (const fieldName of campaignFields) {
+      if (!formData[fieldName]) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" not in form data, skipping`);
+        continue; // Skip if not in form data
+      }
+
+      console.log(`[UAM Form Filler] Attempting to find field: "${fieldName}"`);
+      const element = findInputByName(fieldName, false); // Edit pages don't have a modal
+      
+      if (!element) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" not found on edit page`);
+        // Try searching by label text as fallback
+        const labels = Array.from(document.querySelectorAll('label, [class*="label"], [class*="Label"]'));
+        let foundViaLabel = false;
+        
+        for (const label of labels) {
+          const labelText = label.textContent?.toLowerCase() || '';
+          
+          if (fieldName === 'campaignName' && (labelText.includes('campaign') && labelText.includes('name'))) {
+            console.log(`[UAM Form Filler] Found potential label for campaignName: "${label.textContent}"`);
+            const associatedInput = label.querySelector('input, textarea, [role="textbox"]') || 
+                                   document.querySelector(`#${label.getAttribute('for')}`) ||
+                                   label.nextElementSibling?.querySelector('input, textarea, [role="textbox"]');
+            if (associatedInput) {
+              console.log(`[UAM Form Filler] Found input via label:`, associatedInput);
+              const currentValue = getFieldValue(associatedInput as HTMLElement);
+              console.log(`[UAM Form Filler] Current value via label: "${currentValue}"`);
+              if (isEmptyOrDefault(currentValue, fieldName)) {
+                const success = setInputValue(associatedInput as HTMLElement, formData[fieldName]);
+                if (success) {
+                  successes.push(fieldName);
+                  console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} via label`);
+                  foundViaLabel = true;
+                  break;
+                } else {
+                  console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} via label`);
+                }
+              } else {
+                console.log(`[UAM Form Filler] Field "${fieldName}" already has value via label: "${currentValue}", skipping`);
+                skipped.push(fieldName);
+                foundViaLabel = true;
+                break;
+              }
+            }
+          }
+          
+          if (fieldName === 'campaignLifetimeBudget' && (labelText.includes('budget') || labelText.includes('lifetime'))) {
+            console.log(`[UAM Form Filler] Found potential label for budget: "${label.textContent}"`);
+            // Try multiple ways to find the associated input
+            let associatedInput = label.querySelector('input, textarea, [role="textbox"], [contenteditable="true"]');
+            if (!associatedInput && label.getAttribute('for')) {
+              associatedInput = document.querySelector(`#${label.getAttribute('for')}`);
+            }
+            if (!associatedInput) {
+              // Try next sibling
+              associatedInput = label.nextElementSibling?.querySelector('input, textarea, [role="textbox"], [contenteditable="true"]') as HTMLElement;
+            }
+            if (!associatedInput) {
+              // Try parent container
+              const parent = label.closest('div, form, section');
+              if (parent) {
+                associatedInput = parent.querySelector('input, textarea, [role="textbox"], [contenteditable="true"]') as HTMLElement;
+              }
+            }
+            
+            if (associatedInput) {
+              console.log(`[UAM Form Filler] Found input via label:`, associatedInput);
+              const currentValue = getFieldValue(associatedInput as HTMLElement);
+              console.log(`[UAM Form Filler] Budget current value via label: "${currentValue}"`);
+              // Use the actual field name from the input (spend_cap) for isEmptyOrDefault check
+              const inputName = (associatedInput as HTMLInputElement).name || associatedInput.getAttribute('name') || '';
+              const checkFieldName = inputName || fieldName; // Use input name if available, otherwise use fieldName
+              console.log(`[UAM Form Filler] Checking isEmptyOrDefault with fieldName: "${checkFieldName}"`);
+              const isEmpty = isEmptyOrDefault(currentValue, checkFieldName);
+              console.log(`[UAM Form Filler] Budget isEmptyOrDefault via label: ${isEmpty} (value: "${currentValue}", fieldName: "${checkFieldName}")`);
+              
+              if (isEmpty) {
+                const budgetValue = '$100';
+                console.log(`[UAM Form Filler] Setting budget to ${budgetValue} via label (was: "${currentValue}")`);
+                const success = setInputValue(associatedInput as HTMLElement, budgetValue);
+                if (success) {
+                  successes.push(fieldName);
+                  console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} via label`);
+                  foundViaLabel = true;
+                  break;
+                } else {
+                  console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} via label`);
+                  errors.push(fieldName);
+                  foundViaLabel = true;
+                  break;
+                }
+              } else {
+                console.log(`[UAM Form Filler] Budget already has value via label: "${currentValue}", skipping`);
+                skipped.push(fieldName);
+                foundViaLabel = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (foundViaLabel) {
+          continue; // Skip to next field since we handled this one via label
+        }
+        
+        // Field not found at all
+        console.log(`[UAM Form Filler] Field "${fieldName}" not found by name or label`);
+        continue;
+      }
+
+      console.log(`[UAM Form Filler] Found element for "${fieldName}":`, element);
+
+      // Check if field is enabled
+      const isEnabled = isFieldEnabled(element);
+      console.log(`[UAM Form Filler] Field "${fieldName}" enabled: ${isEnabled}`);
+      if (!isEnabled) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" is disabled, skipping`);
+        skipped.push(fieldName);
+        continue;
+      }
+
+      // Get current value
+      const currentValue = getFieldValue(element);
+      console.log(`[UAM Form Filler] Field "${fieldName}" current value: "${currentValue}"`);
+      
+      // Special handling for budget field
+      if (fieldName === 'campaignLifetimeBudget') {
+        const isEmpty = isEmptyOrDefault(currentValue, fieldName);
+        console.log(`[UAM Form Filler] Budget field isEmptyOrDefault: ${isEmpty}`);
+        if (!isEmpty) {
+          console.log(`[UAM Form Filler] Budget field already has value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        // Set to $5 if empty or $0.00
+        const budgetValue = '$5';
+        console.log(`[UAM Form Filler] Setting budget to ${budgetValue} (was: "${currentValue}")`);
+        const success = setInputValue(element, budgetValue);
+        if (success) {
+          successes.push(fieldName);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName}`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName}`);
+        }
+        continue;
+      }
+
+      // For other fields, check if empty or default
+      const isEmpty = isEmptyOrDefault(currentValue, fieldName);
+      console.log(`[UAM Form Filler] Field "${fieldName}" isEmptyOrDefault: ${isEmpty}`);
+      if (!isEmpty) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" already has value: "${currentValue}", skipping`);
+        skipped.push(fieldName);
+        continue;
+      }
+
+      // Fill the field
+      const value = formData[fieldName];
+      console.log(`[UAM Form Filler] Filling "${fieldName}" with value:`, value);
+      const success = setInputValue(element, value);
+      if (success) {
+        successes.push(fieldName);
+        console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName}`);
+      } else {
+        errors.push(fieldName);
+        console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName}`);
+      }
+    }
+  }
+
+  // TODO: Add adgroup and ad edit logic when needed
+  if (isAdgroupEdit) {
+    console.log('[UAM Form Filler] Adgroup edit page - not yet implemented');
+  }
+
+  if (isAdEdit) {
+    console.log('[UAM Form Filler] Ad edit page - not yet implemented');
+  }
+
+  if (errors.length > 0) {
+    const errorMsg = `Failed to set fields: ${errors.join(', ')}. Successfully set: ${successes.join(', ')}. Skipped: ${skipped.join(', ')}`;
+    return { success: false, error: errorMsg };
+  }
+
+  console.log('[UAM Form Filler] Edit form filled successfully');
+  console.log(`[UAM Form Filler] Successfully set: ${successes.join(', ')}. Skipped: ${skipped.join(', ')}`);
   return { success: true };
 }

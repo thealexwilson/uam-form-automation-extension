@@ -25,6 +25,16 @@ const REDDIT_CAMPAIGN_FORM_DATA = {
   },
 };
 
+const REDDIT_CAMPAIGN_EDIT_FORM_DATA = {
+  campaignName: `Test Reddit Campaign ${getCurrentDateTimeString()}`,
+  campaignOperationStatus: 'ACTIVE', // Default operation status
+  campaignLifetimeBudget: '$100', // Will be set if empty or $0.00
+  objectiveType: {
+    value: 'AWARENESS',
+    label: 'Awareness',
+  },
+};
+
 async function fillForm() {
   const fillButton = document.getElementById('fillForm') as HTMLButtonElement;
   const statusEl = document.getElementById('status') as HTMLDivElement;
@@ -68,21 +78,30 @@ async function fillForm() {
     }
 
     if (!checkResponse?.available) {
-      statusEl.textContent =
-        'Error: Create modal not found. Please open the create campaign modal first.';
-      statusEl.className = 'status error';
-      fillButton.disabled = false;
-      return;
+      const pageType = checkResponse?.pageType || 'unknown';
+      if (pageType === 'edit') {
+        // Edit pages don't need a modal, continue
+      } else {
+        statusEl.textContent =
+          'Error: Create modal not found. Please open the create campaign modal first.';
+        statusEl.className = 'status error';
+        fillButton.disabled = false;
+        return;
+      }
     }
 
-    statusEl.textContent = 'Filling form...';
+    const pageType = checkResponse?.pageType || 'unknown';
+    const isEditPage = pageType === 'edit';
+    
+    statusEl.textContent = isEditPage ? 'Filling edit form...' : 'Filling form...';
     statusEl.className = 'status info';
 
     let response;
     try {
+      const formData = isEditPage ? REDDIT_CAMPAIGN_EDIT_FORM_DATA : REDDIT_CAMPAIGN_FORM_DATA;
       response = await chrome.tabs.sendMessage(tab.id, {
         action: 'fillForm',
-        formData: REDDIT_CAMPAIGN_FORM_DATA,
+        formData: formData,
       });
     } catch (error) {
       statusEl.textContent = 'Error: Content script not loaded. Please refresh the page and try again.';
