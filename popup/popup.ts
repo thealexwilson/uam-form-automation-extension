@@ -17,6 +17,8 @@ const getCurrentDateTimeString = (): string => {
 const REDDIT_CAMPAIGN_FORM_DATA = {
   campaignUpsert: 'new' as const,
   campaignName: `Test Reddit Campaign ${getCurrentDateTimeString()}`,
+  adgroupName: `Test Reddit Adgroup ${getCurrentDateTimeString()}`,
+  adName: `Test Reddit Ad ${getCurrentDateTimeString()}`,
   objectiveType: {
     value: 'AWARENESS',
     label: 'Awareness',

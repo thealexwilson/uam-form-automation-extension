@@ -57,6 +57,8 @@ Edit `popup/popup.ts` and modify the `REDDIT_CAMPAIGN_FORM_DATA` constant.
 4. Click "Fill Form" button in the popup
 5. The form will be automatically filled with:
    - Campaign name: "Test Reddit Campaign [current date and time]"
+   - Adgroup name: "Test Reddit Adgroup [current date and time]"
+   - Ad name: "Test Reddit Ad [current date and time]"
    - Objective type: "Brand Awareness and Reach"
 
 ## Development & Debugging

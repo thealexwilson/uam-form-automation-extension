@@ -42,6 +42,48 @@ function findInputByName(name: string): HTMLElement | null {
     }
   }
 
+  if (name === 'adgroupName') {
+    console.log(`[UAM Form Filler] Searching for adgroupName alternatives...`);
+    const alternatives = [
+      'adgroup',
+      'adGroup',
+      'ad_group',
+      'adGroupName',
+      'ad_group_name',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'adName') {
+    console.log(`[UAM Form Filler] Searching for adName alternatives...`);
+    const alternatives = [
+      'ad',
+      'ad_name',
+      'adName',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
   return null;
 }
 
@@ -389,7 +431,51 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                         if (hiddenInput) {
                           console.log(`[UAM Form Filler] Hidden input value after click: ${hiddenInput.value}`);
                         }
-                      }, 100);
+                        
+                        // Close the dropdown by blurring the input element
+                        // Try to use the inputElement from closure, or find it again
+                        let elementToBlur = inputElement;
+                        if (!elementToBlur && visibleDropdown) {
+                          elementToBlur = visibleDropdown.querySelector('.react-select__input') as HTMLInputElement;
+                        }
+                        if (!elementToBlur) {
+                          // Fallback: find by ID or other selectors
+                          elementToBlur = document.querySelector('.react-select__input[id*="react-select"]') as HTMLInputElement;
+                        }
+                        
+                        if (elementToBlur) {
+                          console.log(`[UAM Form Filler] Blurring dropdown input to close menu`);
+                          elementToBlur.blur();
+                          
+                          // Also dispatch Escape key to ensure dropdown closes
+                          const escapeEvent = new KeyboardEvent('keydown', {
+                            bubbles: true,
+                            cancelable: true,
+                            key: 'Escape',
+                            code: 'Escape',
+                            keyCode: 27
+                          });
+                          elementToBlur.dispatchEvent(escapeEvent);
+                          
+                          // Blur any parent containers as well
+                          const container = elementToBlur.closest('.react-select__control') || 
+                                          elementToBlur.closest('[class*="react-select"]');
+                          if (container) {
+                            (container as HTMLElement).blur();
+                          }
+                        } else {
+                          // Fallback: click outside the dropdown to close it
+                          console.log(`[UAM Form Filler] Input element not found, clicking outside to close dropdown`);
+                          if (visibleDropdown) {
+                            const clickOutsideEvent = new MouseEvent('mousedown', {
+                              bubbles: true,
+                              cancelable: true,
+                              view: window
+                            });
+                            document.body.dispatchEvent(clickOutsideEvent);
+                          }
+                        }
+                      }, 150);
                       
                       return;
                     }
@@ -559,6 +645,152 @@ function findAndSetInput(name: string, value: any): boolean {
   return setInputValue(element, value);
 }
 
+function checkSkipCheckbox(skipType: 'adgroup' | 'ad'): boolean {
+  const modal = document.querySelector('#create-modal');
+  if (!modal) return false;
+
+  const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+  
+  for (const checkbox of Array.from(checkboxes)) {
+    const label = checkbox.closest('label') || 
+                  checkbox.parentElement?.querySelector('label') ||
+                  document.querySelector(`label[for="${checkbox.id}"]`);
+    
+    const labelText = (label?.textContent?.toLowerCase() || '').trim();
+    const checkboxId = checkbox.id?.toLowerCase() || '';
+    const checkboxName = checkbox.getAttribute('name')?.toLowerCase() || '';
+    
+    const allText = `${labelText} ${checkboxId} ${checkboxName}`.toLowerCase();
+    
+    let matches = false;
+    
+    if (skipType === 'adgroup') {
+      // For adgroup: must contain "skip" AND ("adgroup" OR "ad group") AND NOT just "ad" alone
+      matches = allText.includes('skip') && 
+                (allText.includes('adgroup') || allText.includes('ad group')) &&
+                !(allText.includes('skip ad') && !allText.includes('group'));
+    } else {
+      // For ad: must contain "skip" AND "ad" BUT NOT "adgroup" or "ad group"
+      matches = allText.includes('skip') && 
+                allText.includes('ad') &&
+                !allText.includes('adgroup') &&
+                !allText.includes('ad group');
+    }
+    
+    if (matches) {
+      const isChecked = (checkbox as HTMLInputElement).checked;
+      console.log(`[UAM Form Filler] Found "${skipType}" skip checkbox: checked=${isChecked}, label="${labelText}"`);
+      return isChecked;
+    }
+  }
+
+  console.log(`[UAM Form Filler] "${skipType}" skip checkbox not found, assuming not skipped`);
+  return false;
+}
+
+function checkUseExisting(entityType: 'campaign' | 'adgroup' | 'ad'): boolean {
+  const modal = document.querySelector('#create-modal');
+  if (!modal) return false;
+
+  // Check radio buttons first (common for "new" vs "existing" selection)
+  const radioButtons = modal.querySelectorAll('input[type="radio"]');
+  
+  for (const radio of Array.from(radioButtons)) {
+    const label = radio.closest('label') || 
+                  radio.parentElement?.querySelector('label') ||
+                  document.querySelector(`label[for="${radio.id}"]`);
+    
+    const labelText = (label?.textContent?.toLowerCase() || '').trim();
+    const radioId = radio.id?.toLowerCase() || '';
+    const radioName = radio.getAttribute('name')?.toLowerCase() || '';
+    const radioValue = (radio as HTMLInputElement).value?.toLowerCase() || '';
+    
+    const allText = `${labelText} ${radioId} ${radioName} ${radioValue}`.toLowerCase();
+    
+    // Check if this radio button indicates "use existing" for the specific entity type
+    let matchesEntity = false;
+    if (entityType === 'campaign') {
+      // For campaign: look for campaign-related "use existing" or check campaignUpsert field
+      matchesEntity = (allText.includes('campaign') || radioName.includes('campaign') || radioName.includes('upsert')) &&
+                      ((allText.includes('use') && allText.includes('existing')) ||
+                       allText.includes('existing') ||
+                       radioValue === 'existing' ||
+                       radioValue === 'use-existing');
+    } else if (entityType === 'adgroup') {
+      // For adgroup: look for adgroup-related "use existing"
+      matchesEntity = (allText.includes('adgroup') || allText.includes('ad group')) &&
+                      ((allText.includes('use') && allText.includes('existing')) ||
+                       allText.includes('existing'));
+    } else if (entityType === 'ad') {
+      // For ad: look for ad-related "use existing" (but not adgroup)
+      matchesEntity = allText.includes('ad') &&
+                      !allText.includes('adgroup') &&
+                      !allText.includes('ad group') &&
+                      ((allText.includes('use') && allText.includes('existing')) ||
+                       allText.includes('existing'));
+    }
+    
+    if (matchesEntity) {
+      const isChecked = (radio as HTMLInputElement).checked;
+      console.log(`[UAM Form Filler] Found "${entityType}" use existing radio: checked=${isChecked}, label="${labelText}", value="${radioValue}"`);
+      return isChecked;
+    }
+  }
+
+  // Also check checkboxes (in case it's a checkbox instead of radio)
+  const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+  
+  for (const checkbox of Array.from(checkboxes)) {
+    const label = checkbox.closest('label') || 
+                  checkbox.parentElement?.querySelector('label') ||
+                  document.querySelector(`label[for="${checkbox.id}"]`);
+    
+    const labelText = (label?.textContent?.toLowerCase() || '').trim();
+    const checkboxId = checkbox.id?.toLowerCase() || '';
+    const checkboxName = checkbox.getAttribute('name')?.toLowerCase() || '';
+    
+    const allText = `${labelText} ${checkboxId} ${checkboxName}`.toLowerCase();
+    
+    let matchesEntity = false;
+    if (entityType === 'campaign') {
+      matchesEntity = (allText.includes('campaign') || checkboxName.includes('campaign')) &&
+                      (allText.includes('use') && allText.includes('existing')) &&
+                      !allText.includes('skip');
+    } else if (entityType === 'adgroup') {
+      matchesEntity = (allText.includes('adgroup') || allText.includes('ad group')) &&
+                      (allText.includes('use') && allText.includes('existing')) &&
+                      !allText.includes('skip');
+    } else if (entityType === 'ad') {
+      matchesEntity = allText.includes('ad') &&
+                      !allText.includes('adgroup') &&
+                      !allText.includes('ad group') &&
+                      (allText.includes('use') && allText.includes('existing')) &&
+                      !allText.includes('skip');
+    }
+    
+    if (matchesEntity) {
+      const isChecked = (checkbox as HTMLInputElement).checked;
+      console.log(`[UAM Form Filler] Found "${entityType}" use existing checkbox: checked=${isChecked}, label="${labelText}"`);
+      return isChecked;
+    }
+  }
+
+  // Special check for campaignUpsert field value (only for campaign)
+  if (entityType === 'campaign') {
+    const campaignUpsertInput = modal.querySelector('input[name="campaignUpsert"], input[name="campaign_upsert"], input[id*="campaignUpsert"]') as HTMLInputElement;
+    if (campaignUpsertInput) {
+      const value = campaignUpsertInput.value?.toLowerCase() || '';
+      if (value === 'existing' || value === 'use-existing' || value === 'use_existing') {
+        console.log(`[UAM Form Filler] Found campaign "use existing" via campaignUpsert field: value="${value}"`);
+        return true;
+      }
+    }
+  }
+
+  console.log(`[UAM Form Filler] "${entityType}" use existing not found, assuming creating new`);
+  return false;
+}
+
 export function fillForm(formData: Record<string, any>): { success: boolean; error?: string } {
   const modal = document.querySelector('#create-modal');
   if (!modal) {
@@ -569,10 +801,45 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
 
   console.log('[UAM Form Filler] Filling form with data:', formData);
 
+  // Check "use existing" for campaign and adgroup (no "use existing" for ads)
+  const useExistingCampaign = checkUseExisting('campaign');
+  const useExistingAdgroup = checkUseExisting('adgroup');
+  
+  // Check skip checkboxes
+  const skipAdgroup = checkSkipCheckbox('adgroup');
+  const skipAd = checkSkipCheckbox('ad');
+
+  const filteredFormData: Record<string, any> = { ...formData };
+
+  // Campaign section: if "use existing" is selected, skip campaign fields
+  if (useExistingCampaign) {
+    console.log('[UAM Form Filler] Campaign "use existing" is selected, skipping campaign fields');
+    delete filteredFormData.campaignUpsert;
+    delete filteredFormData.campaignName;
+    delete filteredFormData.objectiveType;
+  }
+
+  // Adgroup section: skip if "use existing" OR "skip" is checked
+  if (useExistingAdgroup || skipAdgroup) {
+    if (useExistingAdgroup) {
+      console.log('[UAM Form Filler] Adgroup "use existing" is selected, skipping adgroupName');
+    }
+    if (skipAdgroup) {
+      console.log('[UAM Form Filler] Skip adgroup is checked, skipping adgroupName');
+    }
+    delete filteredFormData.adgroupName;
+  }
+
+  // Ad section: skip only if "skip" checkbox is checked (no "use existing" option for ads)
+  if (skipAd) {
+    console.log('[UAM Form Filler] Skip ad is checked, skipping adName');
+    delete filteredFormData.adName;
+  }
+
   const errors: string[] = [];
   const successes: string[] = [];
 
-  Object.entries(formData).forEach(([key, value]) => {
+  Object.entries(filteredFormData).forEach(([key, value]) => {
     const success = findAndSetInput(key, value);
     if (success) {
       successes.push(key);
