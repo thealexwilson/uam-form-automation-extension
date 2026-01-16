@@ -39,6 +39,16 @@ This is the most reliable method for local/internal extensions:
 
 **Note:** With Developer mode enabled, Chrome will allow unpacked extensions without any "unknown source" warnings.
 
+## Configuration
+
+### Update Domain
+
+Edit `manifest.json` and replace `http://localhost:3000/*` with your actual UAM domain in both `host_permissions` and `content_scripts.matches`.
+
+### Update Form Values
+
+Edit `popup/popup.ts` and modify the `REDDIT_CAMPAIGN_FORM_DATA` constant.
+
 ## Usage
 
 1. Navigate to UAM Reddit campaigns page: `http://localhost:3000/uam/reddit/campaigns`
@@ -109,16 +119,6 @@ If something isn't working or you want to make changes to the extension yourself
 2. Run `npm run build` (or `npm run dev` for watch mode)
 3. Click "Reload" button on extension card in Chrome Extensions page
 4. Refresh UAM page to test changes
-
-## Configuration
-
-### Update Domain
-
-Edit `manifest.json` and replace `http://localhost:3000/*` with your actual UAM domain in both `host_permissions` and `content_scripts.matches`.
-
-### Update Form Values
-
-Edit `popup/popup.ts` and modify the `REDDIT_CAMPAIGN_FORM_DATA` constant.
 
 ## Limitations
 
