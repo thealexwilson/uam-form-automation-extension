@@ -1,0 +1,18 @@
+{
+  "name": "uam-form-automation-extension",
+  "version": "0.1.0",
+  "description": "Chrome extension to automate filling UAM Reddit campaign creation forms",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "ts-loader": "^9.4.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "@types/chrome": "^0.0.251"
+  }
+}

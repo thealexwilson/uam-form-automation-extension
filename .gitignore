@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.crx
+*.pem
+.DS_Store
+*.log
+cursor_web_form_automation_script.md

@@ -1,0 +1,115 @@
+const getCurrentDateTimeString = (): string => {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit' 
+  }).replace(/\//g, '-');
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  return `${dateStr} ${timeStr}`;
+};
+
+const REDDIT_CAMPAIGN_FORM_DATA = {
+  campaignUpsert: 'new' as const,
+  campaignName: `Test Reddit Campaign ${getCurrentDateTimeString()}`,
+  objectiveType: {
+    value: 'AWARENESS',
+    label: 'Awareness',
+  },
+};
+
+async function fillForm() {
+  const fillButton = document.getElementById('fillForm') as HTMLButtonElement;
+  const statusEl = document.getElementById('status') as HTMLDivElement;
+
+  if (!fillButton || !statusEl) {
+    console.error('[UAM Form Filler] Popup elements not found');
+    return;
+  }
+
+  fillButton.disabled = true;
+  statusEl.textContent = 'Checking form...';
+  statusEl.className = 'status info';
+
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (!tab.id) {
+      throw new Error('No active tab found');
+    }
+
+    if (!tab.url || !tab.url.includes('localhost:3000/uam')) {
+      statusEl.textContent = 'Error: Please navigate to a UAM page (localhost:3000/uam)';
+      statusEl.className = 'status error';
+      fillButton.disabled = false;
+      return;
+    }
+
+    let checkResponse;
+    try {
+      checkResponse = await chrome.tabs.sendMessage(tab.id, {
+        action: 'checkForm',
+      });
+    } catch (error) {
+      statusEl.textContent = 'Error: Content script not loaded. Please refresh the page and try again.';
+      statusEl.className = 'status error';
+      fillButton.disabled = false;
+      return;
+    }
+
+    if (!checkResponse?.available) {
+      statusEl.textContent =
+        'Error: Create modal not found. Please open the create campaign modal first.';
+      statusEl.className = 'status error';
+      fillButton.disabled = false;
+      return;
+    }
+
+    statusEl.textContent = 'Filling form...';
+    statusEl.className = 'status info';
+
+    let response;
+    try {
+      response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'fillForm',
+        formData: REDDIT_CAMPAIGN_FORM_DATA,
+      });
+    } catch (error) {
+      statusEl.textContent = 'Error: Content script not loaded. Please refresh the page and try again.';
+      statusEl.className = 'status error';
+      fillButton.disabled = false;
+      return;
+    }
+
+    if (response?.success) {
+      statusEl.textContent = 'Form filled successfully!';
+      statusEl.className = 'status success';
+    } else {
+      const errorMsg = response?.error || 'Failed to fill form. Make sure the create modal is open.';
+      statusEl.textContent = `Error: ${errorMsg}`;
+      statusEl.className = 'status error';
+      console.error('[UAM Form Filler] Fill form error:', errorMsg);
+    }
+  } catch (error) {
+    console.error('[UAM Form Filler] Error:', error);
+    statusEl.textContent = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    statusEl.className = 'status error';
+  } finally {
+    fillButton.disabled = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const fillButton = document.getElementById('fillForm');
+  if (fillButton) {
+    fillButton.addEventListener('click', fillForm);
+  }
+});
