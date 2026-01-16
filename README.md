@@ -22,7 +22,21 @@ This extension currently supports:
 4. Drag the `.crx` file onto the Extensions page
 5. Click "Add extension" when prompted
 
+## Usage
+
+1. Navigate to UAM Reddit campaigns page: `http://localhost:3000/uam/reddit/campaigns`
+2. Click the "Create" button to open the campaign creation modal
+3. Click the extension icon in Chrome toolbar
+4. Click "Fill Form" button in the popup
+5. The form will be automatically filled with:
+   - Campaign name: "Test Reddit Campaign [current date and time]"
+   - Objective type: "Brand Awareness and Reach"
+
+## Development & Debugging
+
 ### Development Setup
+
+If something isn't working or you want to make changes to the extension yourself.
 
 1. Clone the repository:
    ```bash
@@ -56,18 +70,6 @@ This extension currently supports:
    npm run dev
    ```
    Then reload the extension in Chrome after making changes.
-
-## Usage
-
-1. Navigate to UAM Reddit campaigns page: `http://localhost:3000/uam/reddit/campaigns`
-2. Click the "Create" button to open the campaign creation modal
-3. Click the extension icon in Chrome toolbar
-4. Click "Fill Form" button in the popup
-5. The form will be automatically filled with:
-   - Campaign name: "Test Reddit Campaign [current date and time]"
-   - Objective type: "Brand Awareness and Reach"
-
-## Development & Debugging
 
 ### Debugging Content Script
 
