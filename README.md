@@ -14,13 +14,30 @@ This extension currently supports:
 
 ## Installation
 
-### From .crx File (Recommended)
+### Recommended: Load Unpacked Extension
 
-1. Download the latest `.crx` file from [GitHub Releases](https://github.com/thealexwilson/uam-form-automation-extension/releases)
-2. Open Chrome → Extensions (`chrome://extensions/`)
-3. Enable "Developer mode" (toggle in top-right)
-4. Drag the `.crx` file onto the Extensions page
-5. Click "Add extension" when prompted
+This is the most reliable method for local/internal extensions:
+
+1. Clone or download the repository:
+   ```bash
+   git clone https://github.com/thealexwilson/uam-form-automation-extension.git
+   cd uam-form-automation-extension
+   ```
+
+2. Install dependencies and build:
+   ```bash
+   npm install
+   npm run build
+   ```
+
+3. Load the extension in Chrome:
+   - Open Chrome → Extensions (`chrome://extensions/`)
+   - **Enable "Developer mode"** (toggle in top-right - this is required!)
+   - Click **"Load unpacked"**
+   - Navigate to and select the `dist` directory in the project folder
+   - The extension should now appear in your extensions list
+
+**Note:** With Developer mode enabled, Chrome will allow unpacked extensions without any "unknown source" warnings.
 
 ## Usage
 
@@ -93,25 +110,6 @@ If something isn't working or you want to make changes to the extension yourself
 3. Click "Reload" button on extension card in Chrome Extensions page
 4. Refresh UAM page to test changes
 
-## Building & Packaging
-
-### Create .crx File
-
-1. Build the extension:
-   ```bash
-   npm run build
-   ```
-
-2. Package extension:
-   - Open Chrome → Extensions → Developer mode
-   - Click "Pack extension"
-   - Extension root directory: `./dist`
-   - Private key file: Leave empty (first time) or use existing `.pem` file
-   - Click "Pack Extension"
-   - `.crx` file created in parent directory
-
-3. Upload to GitHub Releases for distribution
-
 ## Configuration
 
 ### Update Domain
@@ -147,10 +145,12 @@ Edit `popup/popup.ts` and modify the `REDDIT_CAMPAIGN_FORM_DATA` constant.
 - Check browser console for error messages
 - Verify you're on the Reddit campaigns page (`/uam/reddit/campaigns`)
 
-**Extension not loading:**
-- Make sure Developer mode is enabled
+**Extension not loading / "Chrome doesn't know where it comes from":**
+- **Make sure Developer mode is enabled** (this is required!)
 - Check that all files are in the `dist` directory
 - Verify `manifest.json` is valid JSON
+- Try removing and re-adding the extension
+- Make sure you're selecting the `dist` directory (not the project root) when loading unpacked
 
 ## License
 
