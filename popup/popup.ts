@@ -62,6 +62,25 @@ const REDDIT_ADGROUP_EDIT_FORM_DATA = {
   bidValue: '5', // CPM Bid value - will be set if empty
 };
 
+const REDDIT_AD_EDIT_FORM_DATA = {
+  adName: `Test Reddit Ad ${getCurrentDateTimeString()}`,
+  postType: {
+    value: 'IMAGE', // Default post type - adjust as needed
+    label: 'Image',
+  },
+  profile: {
+    value: '', // Will need to be set based on available options
+    label: '',
+  },
+  headline: `Test Headline ${getCurrentDateTimeString()}`,
+  callToAction: {
+    value: 'LEARN_MORE', // Default CTA - adjust as needed
+    label: 'Learn More',
+  },
+  destinationUrl: 'https://example.com',
+  displayUrl: 'example.com',
+};
+
 async function fillForm() {
   const fillButton = document.getElementById('fillForm') as HTMLButtonElement;
   const statusEl = document.getElementById('status') as HTMLDivElement;
@@ -129,7 +148,9 @@ async function fillForm() {
       if (isEditPage) {
         // Determine entity type from URL
         const url = tab.url || '';
-        if (url.includes('/adgroups/') || url.includes('/ad-groups/')) {
+        if (url.includes('/ads/')) {
+          formData = REDDIT_AD_EDIT_FORM_DATA;
+        } else if (url.includes('/adgroups/') || url.includes('/ad-groups/')) {
           formData = REDDIT_ADGROUP_EDIT_FORM_DATA;
         } else {
           // Default to campaign edit form data

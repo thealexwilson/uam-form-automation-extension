@@ -79,10 +79,327 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
 
   if (name === 'adName') {
     console.log(`[UAM Form Filler] Searching for adName alternatives...`);
+    // Direct search for "name" field first (most common on ad edit pages)
+    const nameInput = searchScope.querySelector('input[name="name"]');
+    if (nameInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "name" field`);
+      return nameInput as HTMLElement;
+    }
+    
     const alternatives = [
       'ad',
       'ad_name',
       'adName',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'postType') {
+    console.log(`[UAM Form Filler] Searching for postType...`);
+    // Direct search for creative.type field
+    const creativeTypeInput = searchScope.querySelector('input[name="creative.type"]');
+    if (creativeTypeInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "creative.type" field`);
+      return creativeTypeInput as HTMLElement;
+    }
+    
+    const alternatives = [
+      'post_type',
+      'postType',
+      'post-type',
+      'type',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'profile') {
+    console.log(`[UAM Form Filler] Searching for profile...`);
+    // Direct search for profile_id field
+    const profileIdInput = searchScope.querySelector('input[name="profile_id"]');
+    if (profileIdInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "profile_id" field`);
+      return profileIdInput as HTMLElement;
+    }
+    
+    const alternatives = [
+      'profile_id',
+      'profileId',
+      'profile-id',
+      'account',
+      'account_id',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'headline') {
+    console.log(`[UAM Form Filler] Searching for headline...`);
+    // Direct search for creative.headline field
+    const headlineInput = searchScope.querySelector('input[name="creative.headline"]');
+    if (headlineInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "creative.headline" field`);
+      return headlineInput as HTMLElement;
+    }
+    
+    const alternatives = [
+      'headline_text',
+      'headlineText',
+      'headline-text',
+      'title',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'callToAction') {
+    console.log(`[UAM Form Filler] Searching for callToAction...`);
+    // Direct search for creative.content.0.call_to_action field
+    const ctaInput = searchScope.querySelector('input[name="creative.content.0.call_to_action"]');
+    if (ctaInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "creative.content.0.call_to_action" field`);
+      return ctaInput as HTMLElement;
+    }
+    
+    const alternatives = [
+      'call_to_action',
+      'callToAction',
+      'call-to-action',
+      'cta',
+      'button_text',
+      'buttonText',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'destinationUrl') {
+    console.log(`[UAM Form Filler] Searching for destinationUrl...`);
+    // Direct search for creative.content.0.destination_url field
+    const destUrlInput = searchScope.querySelector('input[name="creative.content.0.destination_url"]');
+    if (destUrlInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "creative.content.0.destination_url" field`);
+      return destUrlInput as HTMLElement;
+    }
+    
+    const alternatives = [
+      'destination_url',
+      'destinationUrl',
+      'destination-url',
+      'destination',
+      'url',
+      'link_url',
+      'linkUrl',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'displayUrl') {
+    console.log(`[UAM Form Filler] Searching for displayUrl...`);
+    // Direct search for creative.content.0.display_url field
+    const displayUrlInput = searchScope.querySelector('input[name="creative.content.0.display_url"]');
+    if (displayUrlInput) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using "creative.content.0.display_url" field`);
+      return displayUrlInput as HTMLElement;
+    }
+    
+    const alternatives = [
+      'display_url',
+      'displayUrl',
+      'display-url',
+      'display',
+      'visible_url',
+      'visibleUrl',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'postType') {
+    console.log(`[UAM Form Filler] Searching for postType alternatives...`);
+    const alternatives = [
+      'post_type',
+      'postType',
+      'post-type',
+      'type',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'profile') {
+    console.log(`[UAM Form Filler] Searching for profile alternatives...`);
+    const alternatives = [
+      'profile_id',
+      'profileId',
+      'profile-id',
+      'account',
+      'account_id',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'headline') {
+    console.log(`[UAM Form Filler] Searching for headline alternatives...`);
+    const alternatives = [
+      'headline_text',
+      'headlineText',
+      'headline-text',
+      'title',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'callToAction') {
+    console.log(`[UAM Form Filler] Searching for callToAction alternatives...`);
+    const alternatives = [
+      'call_to_action',
+      'callToAction',
+      'call-to-action',
+      'cta',
+      'button_text',
+      'buttonText',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'destinationUrl') {
+    console.log(`[UAM Form Filler] Searching for destinationUrl alternatives...`);
+    const alternatives = [
+      'destination_url',
+      'destinationUrl',
+      'destination-url',
+      'destination',
+      'url',
+      'link_url',
+      'linkUrl',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+  
+  if (name === 'displayUrl') {
+    console.log(`[UAM Form Filler] Searching for displayUrl alternatives...`);
+    const alternatives = [
+      'display_url',
+      'displayUrl',
+      'display-url',
+      'display',
+      'visible_url',
+      'visibleUrl',
     ];
     
     for (const altName of alternatives) {
@@ -322,7 +639,13 @@ function setInputValue(element: HTMLElement, value: any): boolean {
       const input = element as HTMLInputElement;
       
       if (inputType === 'hidden') {
-        const valueToSet = typeof value === 'object' && value.value ? String(value.value) : String(value);
+        // Handle object values properly - check if value property exists (even if empty string)
+        let valueToSet: string;
+        if (typeof value === 'object' && value !== null && 'value' in value) {
+          valueToSet = String(value.value);
+        } else {
+          valueToSet = String(value);
+        }
         console.log(`[UAM Form Filler] Setting hidden input value to: ${valueToSet}`);
         
         input.value = valueToSet;
@@ -343,15 +666,27 @@ function setInputValue(element: HTMLElement, value: any): boolean {
           input.dispatchEvent(nativeEvent);
         }
         
-        if (input.name === 'objectiveType') {
-          console.log(`[UAM Form Filler] Looking for visible dropdown component for objectiveType...`);
+        // Handle React Select dropdowns (objectiveType, postType, profile, callToAction, etc.)
+        // Map actual field names to logical names for dropdown handling
+        const dropdownFieldMap: Record<string, string> = {
+          'objectiveType': 'objectiveType',
+          'postType': 'postType',
+          'profile': 'profile',
+          'callToAction': 'callToAction',
+          'creative.type': 'postType', // Actual field name for postType
+          'profile_id': 'profile', // Actual field name for profile
+          'creative.content.0.call_to_action': 'callToAction', // Actual field name for callToAction
+        };
+        
+        const logicalFieldName = dropdownFieldMap[input.name];
+        if (logicalFieldName) {
+          console.log(`[UAM Form Filler] Looking for visible dropdown component for ${input.name} (logical: ${logicalFieldName})...`);
           
           const findAndClickDropdown = () => {
+            // For edit pages, there's no modal, so search in the document
             const modal = input.closest('#create-modal') || document.querySelector('#create-modal');
-            if (!modal) return;
-            
             const parentContainer = input.parentElement?.parentElement || input.closest('div, form, section');
-            const searchScope = parentContainer || modal;
+            const searchScope = modal || parentContainer || document;
             
             let visibleDropdown: HTMLElement | null = null;
             
@@ -379,25 +714,49 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                 'button:has(+ [role="listbox"])',
               ];
               
-              for (const selector of selectors) {
-                const elements = searchScope.querySelectorAll(selector);
-                for (const el of Array.from(elements)) {
-                  const text = el.textContent?.toLowerCase() || '';
-                  if (text.includes('objective') || text.includes('awareness') || text.includes('conversion') || text.includes('traffic') || el === input.nextElementSibling || el === input.previousElementSibling) {
-                    visibleDropdown = el as HTMLElement;
-                    console.log(`[UAM Form Filler] Found visible dropdown using selector: ${selector}`);
+              // Try to find dropdown near the hidden input
+              const inputParent = input.closest('div, form, section');
+              if (inputParent) {
+                for (const selector of selectors) {
+                  const elements = inputParent.querySelectorAll(selector);
+                  if (elements.length > 0) {
+                    visibleDropdown = elements[0] as HTMLElement;
+                    console.log(`[UAM Form Filler] Found visible dropdown near hidden input using selector: ${selector}`);
                     break;
                   }
                 }
-                if (visibleDropdown) break;
+              }
+              
+              // If not found near input, search more broadly
+              if (!visibleDropdown) {
+                for (const selector of selectors) {
+                  const elements = searchScope.querySelectorAll(selector);
+                  for (const el of Array.from(elements)) {
+                    const text = el.textContent?.toLowerCase() || '';
+                    const logicalNameLower = logicalFieldName.toLowerCase();
+                    // Check if element is near the input or contains logical field name keywords
+                    if (text.includes(logicalNameLower) || 
+                        el === input.nextElementSibling || 
+                        el === input.previousElementSibling ||
+                        (logicalFieldName === 'objectiveType' && (text.includes('objective') || text.includes('awareness') || text.includes('conversion') || text.includes('traffic')))) {
+                      visibleDropdown = el as HTMLElement;
+                      console.log(`[UAM Form Filler] Found visible dropdown using selector: ${selector}`);
+                      break;
+                    }
+                  }
+                  if (visibleDropdown) break;
+                }
               }
             }
             
             if (!visibleDropdown) {
               const allButtons = searchScope.querySelectorAll('button, div[role="button"]');
+              const logicalNameLower = logicalFieldName.toLowerCase();
               for (const btn of Array.from(allButtons)) {
                 const btnText = btn.textContent?.toLowerCase() || '';
-                if (btnText.includes('awareness') || btnText.includes('conversion') || btnText.includes('traffic') || btnText.includes('objective')) {
+                // For objectiveType, check for specific keywords; for others, check if near the input or contains field name
+                if ((logicalFieldName === 'objectiveType' && (btnText.includes('awareness') || btnText.includes('conversion') || btnText.includes('traffic') || btnText.includes('objective'))) ||
+                    (logicalFieldName !== 'objectiveType' && (btnText.includes(logicalNameLower) || btn === input.nextElementSibling || btn === input.previousElementSibling))) {
                   visibleDropdown = btn as HTMLElement;
                   console.log(`[UAM Form Filler] Found visible dropdown by text content`);
                   break;
@@ -444,8 +803,22 @@ function setInputValue(element: HTMLElement, value: any): boolean {
               }
               
               const findAndClickOption = (attempt: number = 0) => {
-                const labelToFind = typeof value === 'object' && value.label ? value.label.toLowerCase() : 'awareness';
-                const valueToFind = typeof value === 'object' && value.value ? String(value.value).toLowerCase() : String(value).toLowerCase();
+                // Handle the value properly - if it's an object, extract label/value, otherwise convert to string
+                let labelToFind = '';
+                let valueToFind = '';
+                if (typeof value === 'object' && value !== null) {
+                  // Check if properties exist (even if empty string) - use 'in' operator or check for undefined/null
+                  labelToFind = ('label' in value && value.label !== undefined && value.label !== null) ? String(value.label).toLowerCase() : '';
+                  valueToFind = ('value' in value && value.value !== undefined && value.value !== null) ? String(value.value).toLowerCase() : '';
+                } else {
+                  labelToFind = String(value).toLowerCase();
+                  valueToFind = String(value).toLowerCase();
+                }
+                // Fallback for empty values (shouldn't happen, but just in case)
+                if (!labelToFind && !valueToFind) {
+                  labelToFind = 'awareness';
+                  valueToFind = 'awareness';
+                }
                 
                 if (attempt === 0) {
                   console.log(`[UAM Form Filler] Searching for options with label="${labelToFind}", value="${valueToFind}"`);
@@ -465,11 +838,23 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                 
                 let menuContainer: Element | null = null;
                 
+                // Search in modal first (for create pages), then in document (for edit pages)
                 if (modal) {
                   for (const selector of menuSelectors) {
                     menuContainer = modal.querySelector(selector);
                     if (menuContainer) {
                       console.log(`[UAM Form Filler] Found menu container in modal using selector: ${selector}`);
+                      break;
+                    }
+                  }
+                }
+                
+                // Also search in document for edit pages
+                if (!menuContainer) {
+                  for (const selector of menuSelectors) {
+                    menuContainer = document.querySelector(selector);
+                    if (menuContainer) {
+                      console.log(`[UAM Form Filler] Found menu container in document using selector: ${selector}`);
                       break;
                     }
                   }
@@ -571,13 +956,13 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                   
                   for (const selector of optionSelectors) {
                     const found = searchScope.querySelectorAll(selector);
-                    const optionsWithText = Array.from(found).filter(opt => {
+                    const optionsWithText = Array.from(found).filter((opt: Element) => {
                       const text = opt.textContent?.trim() || '';
                       return text.length > 0 && !opt.classList.toString().includes('input-container');
                     });
                     if (optionsWithText.length > 0) {
                       console.log(`[UAM Form Filler] Found ${optionsWithText.length} options with text using selector: ${selector}`);
-                      options = optionsWithText;
+                      options = optionsWithText as Element[];
                       break;
                     }
                   }
@@ -634,44 +1019,136 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                 
                 if (options.length > 0) {
                   console.log(`[UAM Form Filler] Checking ${options.length} options...`);
+                  console.log(`[UAM Form Filler] Looking for label="${labelToFind}", value="${valueToFind}"`);
+                  
+                  // Log all available options for debugging
+                  console.log(`[UAM Form Filler] Available options:`);
+                  options.forEach((opt, idx) => {
+                    const optText = (opt.textContent?.toLowerCase() || '').trim();
+                    const optValue = (opt.getAttribute('data-value') || opt.getAttribute('value') || opt.getAttribute('id') || '').toLowerCase();
+                    console.log(`[UAM Form Filler]   Option ${idx + 1}: text="${opt.textContent?.trim()}", value="${optValue}"`);
+                  });
+                  
+                  let matchedOption: Element | null = null;
+                  
                   for (const option of options) {
                     const optionText = (option.textContent?.toLowerCase() || '').trim();
                     const optionValue = (option.getAttribute('data-value') || option.getAttribute('value') || option.getAttribute('id') || '').toLowerCase();
                     
-                    console.log(`[UAM Form Filler] Option: text="${optionText}", value="${optionValue}"`);
+                    // Match based on label or value from formData
+                    // Try exact match first, then partial match
+                    const matchesLabelExact = labelToFind && labelToFind.length > 0 && optionText === labelToFind;
+                    const matchesValueExact = valueToFind && valueToFind.length > 0 && optionValue === valueToFind;
+                    const matchesLabelPartial = labelToFind && labelToFind.length > 0 && optionText.includes(labelToFind);
+                    const matchesValuePartial = valueToFind && valueToFind.length > 0 && (optionValue.includes(valueToFind) || optionValue.replace(/[_-]/g, '').includes(valueToFind.replace(/[_-]/g, '')));
+                    // Also check if option text contains the value (for partial matches)
+                    const matchesValueInText = valueToFind && valueToFind.length > 0 && optionText.includes(valueToFind);
+                    // Handle underscore/camelCase variations (e.g., "LEARN_MORE" vs "learn more" vs "Learn More")
+                    const normalizedValueToFind = valueToFind.replace(/[_-]/g, ' ').toLowerCase();
+                    const normalizedOptionText = optionText.replace(/[_-]/g, ' ');
+                    const normalizedOptionValue = optionValue.replace(/[_-]/g, ' ');
+                    const matchesNormalized = normalizedValueToFind.length > 0 && (
+                      normalizedOptionText.includes(normalizedValueToFind) || 
+                      normalizedOptionValue.includes(normalizedValueToFind)
+                    );
                     
-                    if (optionText.includes(labelToFind) || 
-                        optionValue === valueToFind ||
-                        optionText.includes('awareness') ||
-                        optionText.includes('brand awareness') ||
-                        optionText.includes('aware') ||
-                        optionValue.includes('awareness') ||
-                        optionValue === 'awareness') {
-                      console.log(`[UAM Form Filler] ✓ Match found! Clicking option: "${option.textContent}"`);
-                      (option as HTMLElement).click();
+                    if (matchesLabelExact || matchesValueExact || matchesLabelPartial || matchesValuePartial || matchesValueInText || matchesNormalized) {
+                      matchedOption = option;
+                      console.log(`[UAM Form Filler] ✓ Match found! Clicking option: "${option.textContent?.trim()}"`);
+                      console.log(`[UAM Form Filler]   Match details: labelExact=${matchesLabelExact}, valueExact=${matchesValueExact}, labelPartial=${matchesLabelPartial}, valuePartial=${matchesValuePartial}, valueInText=${matchesValueInText}, normalized=${matchesNormalized}`);
+                      break;
+                    }
+                  }
+                  
+                  if (matchedOption) {
+                    (matchedOption as HTMLElement).click();
+                      
+                    setTimeout(() => {
+                      const hiddenInput = document.querySelector(`input[name="${input.name}"]`) as HTMLInputElement;
+                      if (hiddenInput) {
+                        console.log(`[UAM Form Filler] Hidden input value after click: ${hiddenInput.value}`);
+                      }
+                      
+                      // Close the dropdown by blurring the input element
+                      // Try to use the inputElement from closure, or find it again
+                      let elementToBlur = inputElement;
+                      if (!elementToBlur && visibleDropdown) {
+                        elementToBlur = visibleDropdown.querySelector('.react-select__input') as HTMLInputElement;
+                      }
+                      if (!elementToBlur) {
+                        // Fallback: find by ID or other selectors
+                        elementToBlur = document.querySelector('.react-select__input[id*="react-select"]') as HTMLInputElement;
+                      }
+                      
+                      if (elementToBlur) {
+                        console.log(`[UAM Form Filler] Blurring dropdown input to close menu`);
+                        elementToBlur.blur();
+                        
+                        // Also dispatch Escape key to ensure dropdown closes
+                        const escapeEvent = new KeyboardEvent('keydown', {
+                          bubbles: true,
+                          cancelable: true,
+                          key: 'Escape',
+                          code: 'Escape',
+                          keyCode: 27
+                        });
+                        elementToBlur.dispatchEvent(escapeEvent);
+                        
+                        // Blur any parent containers as well
+                        const container = elementToBlur.closest('.react-select__control') || 
+                                        elementToBlur.closest('[class*="react-select"]');
+                        if (container) {
+                          (container as HTMLElement).blur();
+                        }
+                      } else {
+                        // Fallback: click outside the dropdown to close it
+                        console.log(`[UAM Form Filler] Input element not found, clicking outside to close dropdown`);
+                        if (visibleDropdown) {
+                          const clickOutsideEvent = new MouseEvent('mousedown', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                          });
+                          document.body.dispatchEvent(clickOutsideEvent);
+                        }
+                      }
+                    }, 150);
+                    
+                    return;
+                  } else {
+                    console.log(`[UAM Form Filler] ✗ No matching option found for label="${labelToFind}", value="${valueToFind}"`);
+                    console.log(`[UAM Form Filler] Available options were:`, options.map(opt => `"${opt.textContent?.trim()}"`).join(', '));
+                    
+                    // Special handling: if looking for "__FIRST_OPTION__" (profile field), select the first non-"None" option
+                    if (valueToFind === '__first_option__' && options.length > 0) {
+                      // Skip "None" option if it exists, otherwise use first option
+                      let firstOption = options[0];
+                      for (const opt of options) {
+                        const optText = (opt.textContent?.toLowerCase() || '').trim();
+                        if (optText !== 'none') {
+                          firstOption = opt;
+                          break;
+                        }
+                      }
+                      console.log(`[UAM Form Filler] Selecting first available option (skipping "None"): "${firstOption.textContent?.trim()}"`);
+                      (firstOption as HTMLElement).click();
                       
                       setTimeout(() => {
-                        const hiddenInput = document.querySelector('input[name="objectiveType"]') as HTMLInputElement;
+                        const hiddenInput = document.querySelector(`input[name="${input.name}"]`) as HTMLInputElement;
                         if (hiddenInput) {
                           console.log(`[UAM Form Filler] Hidden input value after click: ${hiddenInput.value}`);
                         }
                         
-                        // Close the dropdown by blurring the input element
-                        // Try to use the inputElement from closure, or find it again
+                        // Close the dropdown
                         let elementToBlur = inputElement;
                         if (!elementToBlur && visibleDropdown) {
                           elementToBlur = visibleDropdown.querySelector('.react-select__input') as HTMLInputElement;
                         }
                         if (!elementToBlur) {
-                          // Fallback: find by ID or other selectors
                           elementToBlur = document.querySelector('.react-select__input[id*="react-select"]') as HTMLInputElement;
                         }
-                        
                         if (elementToBlur) {
-                          console.log(`[UAM Form Filler] Blurring dropdown input to close menu`);
                           elementToBlur.blur();
-                          
-                          // Also dispatch Escape key to ensure dropdown closes
                           const escapeEvent = new KeyboardEvent('keydown', {
                             bubbles: true,
                             cancelable: true,
@@ -680,28 +1157,20 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                             keyCode: 27
                           });
                           elementToBlur.dispatchEvent(escapeEvent);
-                          
-                          // Blur any parent containers as well
                           const container = elementToBlur.closest('.react-select__control') || 
                                           elementToBlur.closest('[class*="react-select"]');
                           if (container) {
                             (container as HTMLElement).blur();
                           }
-                        } else {
-                          // Fallback: click outside the dropdown to close it
-                          console.log(`[UAM Form Filler] Input element not found, clicking outside to close dropdown`);
-                          if (visibleDropdown) {
-                            const clickOutsideEvent = new MouseEvent('mousedown', {
-                              bubbles: true,
-                              cancelable: true,
-                              view: window
-                            });
-                            document.body.dispatchEvent(clickOutsideEvent);
-                          }
                         }
                       }, 150);
                       
                       return;
+                    }
+                    
+                    // Don't retry if we've already tried multiple times
+                    if (attempt >= 3) {
+                      console.log(`[UAM Form Filler] Giving up after ${attempt + 1} attempts - no match found`);
                     }
                   }
                 } else {
@@ -1516,6 +1985,21 @@ function isEmptyOrDefault(value: string, fieldName: string): boolean {
     }
   }
   
+  // Ad name default
+  if ((fieldName.toLowerCase().includes('ad') && fieldName.toLowerCase().includes('name')) && 
+      !fieldName.toLowerCase().includes('adgroup') && !fieldName.toLowerCase().includes('ad group')) {
+    const normalizedName = lowerValue.replace(/\s+/g, ' ').trim();
+    // Check multiple variations of the default ad name
+    const isDefault = normalizedName === 'ad name' || 
+                     lowerValue === 'ad name' ||
+                     lowerValue.includes('ad name');
+    console.log(`[UAM Form Filler] isEmptyOrDefault: Checking ad name - normalizedName="${normalizedName}", lowerValue="${lowerValue}", isDefault=${isDefault}`);
+    if (isDefault) {
+      console.log(`[UAM Form Filler] isEmptyOrDefault: Recognizing "${value}" as default ad name`);
+      return true;
+    }
+  }
+  
   // Other common defaults
   return lowerValue === 'none' || lowerValue === 'select' || lowerValue === 'choose' || lowerValue === '--';
 }
@@ -2021,8 +2505,122 @@ export function fillEditForm(formData: Record<string, any>): { success: boolean;
     }
   }
 
+  // For ad edit pages, fill ad-specific fields
   if (isAdEdit) {
-    console.log('[UAM Form Filler] Ad edit page - not yet implemented');
+    const adFields = ['adName', 'postType', 'profile', 'headline', 'callToAction', 'destinationUrl', 'displayUrl'];
+    const processedFields = new Set<string>(); // Track which actual HTML fields we've already processed
+    
+    for (const fieldName of adFields) {
+      if (!formData[fieldName]) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" not in form data, skipping`);
+        continue; // Skip if not in form data
+      }
+
+      console.log(`[UAM Form Filler] Attempting to find field: "${fieldName}"`);
+      const element = findInputByName(fieldName, false); // Edit pages don't have a modal
+      
+      if (element) {
+        const actualFieldName = (element as HTMLInputElement).name || element.getAttribute('name') || '';
+        // Check if we've already processed this actual HTML field (prevent setting same field twice)
+        if (processedFields.has(actualFieldName)) {
+          console.log(`[UAM Form Filler] Field "${actualFieldName}" already processed, skipping duplicate`);
+          continue;
+        }
+        processedFields.add(actualFieldName);
+      }
+      
+      if (!element) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" not found on edit page`);
+        continue;
+      }
+
+      console.log(`[UAM Form Filler] Found element for "${fieldName}":`, element);
+
+      // Check if field is enabled
+      const isEnabled = isFieldEnabled(element);
+      console.log(`[UAM Form Filler] Field "${fieldName}" enabled: ${isEnabled}`);
+      if (!isEnabled) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" is disabled, skipping`);
+        skipped.push(fieldName);
+        continue;
+      }
+
+      // Get current value
+      const currentValue = getFieldValue(element);
+      const actualFieldName = (element as HTMLInputElement).name || element.getAttribute('name') || 'unknown';
+      console.log(`[UAM Form Filler] Field "${fieldName}" (actual HTML name: "${actualFieldName}") current value: "${currentValue}"`);
+      
+      // Special handling for ad name - check if it's "ad name" default
+      if (fieldName === 'adName') {
+        const isEmpty = isEmptyOrDefault(currentValue, fieldName);
+        console.log(`[UAM Form Filler] Ad name field isEmptyOrDefault: ${isEmpty}`);
+        if (!isEmpty) {
+          console.log(`[UAM Form Filler] Ad name field already has value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        const adNameValue = formData[fieldName];
+        console.log(`[UAM Form Filler] Ad name field is empty or default, setting to: "${adNameValue}"`);
+        const success = setInputValue(element, adNameValue);
+        if (success) {
+          successes.push(`${fieldName} (${actualFieldName})`);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} (${actualFieldName}) to "${adNameValue}"`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
+        }
+        continue;
+      }
+      
+      // Special handling for dropdown fields (postType, profile, callToAction) - similar to objectiveType
+      if (fieldName === 'postType' || fieldName === 'profile' || fieldName === 'callToAction') {
+        // Check if field has a value (any non-empty value means it's already set)
+        if (currentValue && currentValue.trim() !== '') {
+          console.log(`[UAM Form Filler] Dropdown field "${actualFieldName}" already has a value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        // For profile, if empty, we'll select the first available option
+        let dropdownValue = formData[fieldName];
+        if (fieldName === 'profile' && (!dropdownValue || (typeof dropdownValue === 'object' && (!dropdownValue.value || !dropdownValue.label)))) {
+          console.log(`[UAM Form Filler] Profile field has no value/label provided, will select first available option`);
+          // Set a placeholder value - the dropdown handler will select the first option if no match is found
+          dropdownValue = { value: '__FIRST_OPTION__', label: '__FIRST_OPTION__' };
+        }
+        // Set dropdown value (will handle React Select dropdown similar to objectiveType)
+        console.log(`[UAM Form Filler] Dropdown field "${actualFieldName}" is empty, setting to:`, dropdownValue);
+        const success = setInputValue(element, dropdownValue);
+        if (success) {
+          successes.push(`${fieldName} (${actualFieldName})`);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} (${actualFieldName})`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
+        }
+        continue;
+      }
+
+      // For other text fields (headline, destinationUrl, displayUrl), check if empty
+      const isEmpty = isEmptyOrDefault(currentValue, fieldName);
+      console.log(`[UAM Form Filler] Field "${fieldName}" isEmptyOrDefault: ${isEmpty}`);
+      if (!isEmpty) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" already has value: "${currentValue}", skipping`);
+        skipped.push(fieldName);
+        continue;
+      }
+
+      // Fill the field
+      const value = formData[fieldName];
+      console.log(`[UAM Form Filler] Filling "${fieldName}" with value:`, value);
+      const success = setInputValue(element, value);
+      if (success) {
+        successes.push(`${fieldName} (${actualFieldName})`);
+        console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} (${actualFieldName})`);
+      } else {
+        errors.push(fieldName);
+        console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
+      }
+    }
   }
 
   if (errors.length > 0) {
