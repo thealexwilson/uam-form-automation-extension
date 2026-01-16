@@ -16,7 +16,7 @@ This extension currently supports:
 
 ### From .crx File (Recommended)
 
-1. Download the latest `.crx` file from [GitHub Releases](https://github.com/your-username/uam-form-automation-extension/releases)
+1. Download the latest `.crx` file from [GitHub Releases](https://github.com/thealexwilson/uam-form-automation-extension/releases)
 2. Open Chrome → Extensions (`chrome://extensions/`)
 3. Enable "Developer mode" (toggle in top-right)
 4. Drag the `.crx` file onto the Extensions page
@@ -26,7 +26,7 @@ This extension currently supports:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/uam-form-automation-extension.git
+   git clone https://github.com/thealexwilson/uam-form-automation-extension.git
    cd uam-form-automation-extension
    ```
 
