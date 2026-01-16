@@ -14,6 +14,24 @@ const getCurrentDateTimeString = (): string => {
   return `${dateStr} ${timeStr}`;
 };
 
+const getCurrentDateString = (): string => {
+  const now = new Date();
+  // Add 7 days (1 week) to the current date
+  const oneWeekFromNow = new Date(now);
+  oneWeekFromNow.setDate(now.getDate() + 7);
+  
+  const year = oneWeekFromNow.getFullYear();
+  const month = String(oneWeekFromNow.getMonth() + 1).padStart(2, '0');
+  const day = String(oneWeekFromNow.getDate()).padStart(2, '0');
+  // Return in MM/DD/YYYY format
+  return `${month}/${day}/${year}`;
+};
+
+const getCurrentTimeString = (): string => {
+  // Default to noon (12:00) when time field is empty
+  return '12:00';
+};
+
 const REDDIT_CAMPAIGN_FORM_DATA = {
   campaignUpsert: 'new' as const,
   campaignName: `Test Reddit Campaign ${getCurrentDateTimeString()}`,
@@ -33,6 +51,15 @@ const REDDIT_CAMPAIGN_EDIT_FORM_DATA = {
     value: 'AWARENESS',
     label: 'Awareness',
   },
+};
+
+const REDDIT_ADGROUP_EDIT_FORM_DATA = {
+  adgroupName: `Test Reddit Adgroup ${getCurrentDateTimeString()}`,
+  adgroupOperationStatus: 'ACTIVE', // Default operation status
+  adgroupBudget: '$100', // Will be set if empty or $0.00
+  scheduleStartDate: getCurrentDateString(), // Start date in MM/DD/YYYY format (one week from today)
+  scheduleStartTime: getCurrentTimeString(), // Start time in HH:MM format (only set if empty)
+  bidValue: '5', // CPM Bid value - will be set if empty
 };
 
 async function fillForm() {
@@ -98,7 +125,19 @@ async function fillForm() {
 
     let response;
     try {
-      const formData = isEditPage ? REDDIT_CAMPAIGN_EDIT_FORM_DATA : REDDIT_CAMPAIGN_FORM_DATA;
+      let formData;
+      if (isEditPage) {
+        // Determine entity type from URL
+        const url = tab.url || '';
+        if (url.includes('/adgroups/') || url.includes('/ad-groups/')) {
+          formData = REDDIT_ADGROUP_EDIT_FORM_DATA;
+        } else {
+          // Default to campaign edit form data
+          formData = REDDIT_CAMPAIGN_EDIT_FORM_DATA;
+        }
+      } else {
+        formData = REDDIT_CAMPAIGN_FORM_DATA;
+      }
       response = await chrome.tabs.sendMessage(tab.id, {
         action: 'fillForm',
         formData: formData,

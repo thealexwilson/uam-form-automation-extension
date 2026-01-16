@@ -50,6 +50,7 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
       'ad_group',
       'adGroupName',
       'ad_group_name',
+      'name', // For edit pages, the field might just be called "name"
     ];
     
     for (const altName of alternatives) {
@@ -59,6 +60,18 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
         if (element) {
           console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
           return element as HTMLElement;
+        }
+      }
+    }
+    
+    // Special case: on edit pages, check if we're on an adgroup edit page and look for just "name"
+    if (!searchInModal) {
+      const url = window.location.href;
+      if (url.includes('/adgroups/') || url.includes('/ad-groups/')) {
+        const nameInput = searchScope.querySelector('input[name="name"]');
+        if (nameInput) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using "name" on adgroup edit page`);
+          return nameInput as HTMLElement;
         }
       }
     }
@@ -123,6 +136,172 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
         const element = searchScope.querySelector(altSelector);
         if (element) {
           console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'adgroupOperationStatus') {
+    console.log(`[UAM Form Filler] Searching for adgroupOperationStatus alternatives...`);
+    const alternatives = [
+      'operationStatus',
+      'operation_status',
+      'status',
+      'adgroupStatus',
+      'adgroup_status',
+      'adGroupStatus',
+      'configured_status', // Actual field name on edit pages
+    ];
+    
+    for (const altName of alternatives) {
+      // For radio buttons, we need to find the group first
+      const radioGroup = searchScope.querySelectorAll(`input[type="radio"][name="${altName}"]`);
+      if (radioGroup.length > 0) {
+        console.log(`[UAM Form Filler] Found radio button group for "${name}" using alternative name "${altName}"`);
+        // Return the first radio button - setInputValue will handle finding the right one
+        return radioGroup[0] as HTMLElement;
+      }
+      
+      // Also try regular selectors
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'adgroupBudget') {
+    console.log(`[UAM Form Filler] Searching for adgroupBudget alternatives...`);
+    const alternatives = [
+      'budget',
+      'adgroup_budget',
+      'adGroupBudget',
+      'ad_group_budget',
+      'spend',
+      'spend_cap',
+      'goal_value', // Actual field name on edit pages (for budget/goal)
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'scheduleStartDate') {
+    console.log(`[UAM Form Filler] Searching for scheduleStartDate alternatives...`);
+    // Direct search for the actual field name (most reliable)
+    const directElement = searchScope.querySelector('input[name="_scheduleStartTime.date"], input[name="scheduleStartTime.date"]');
+    if (directElement) {
+      console.log(`[UAM Form Filler] Found input for "${name}" using direct search`);
+      return directElement as HTMLElement;
+    }
+    
+    const alternatives = [
+      '_scheduleStartTime.date',
+      'scheduleStartTime.date',
+      'schedule_start_time.date',
+      'startDate',
+      'start_date',
+      'scheduleDate',
+      'schedule_date',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
+          return element as HTMLElement;
+        }
+      }
+    }
+  }
+
+  if (name === 'scheduleStartTime') {
+    console.log(`[UAM Form Filler] Searching for scheduleStartTime (looking for _scheduleStartTime.time)...`);
+    // Direct search for the actual field name (most reliable) - must end with .time, NOT .date
+    const directElement = searchScope.querySelector('input[name="_scheduleStartTime.time"], input[name="scheduleStartTime.time"]');
+    if (directElement) {
+      const foundName = (directElement as HTMLInputElement).name || directElement.getAttribute('name') || 'unknown';
+      // Double-check it's actually the time field
+      if (foundName.includes('.time') && !foundName.includes('.date')) {
+        console.log(`[UAM Form Filler] Found input for "${name}" using direct search - actual field name: "${foundName}"`);
+        return directElement as HTMLElement;
+      } else {
+        console.log(`[UAM Form Filler] Found element but wrong field type: "${foundName}", continuing search...`);
+      }
+    }
+    
+    // Try exact match selectors that explicitly require .time
+    const exactSelectors = [
+      'input[name="_scheduleStartTime.time"]',
+      'input[name="scheduleStartTime.time"]',
+    ];
+    
+    for (const selector of exactSelectors) {
+      const element = searchScope.querySelector(selector);
+      if (element) {
+        const foundName = (element as HTMLInputElement).name || element.getAttribute('name') || 'unknown';
+        console.log(`[UAM Form Filler] Found input for "${name}" using exact selector "${selector}" - actual field name: "${foundName}"`);
+        // Verify it's actually the time field
+        if (foundName.includes('.time') && !foundName.includes('.date')) {
+          return element as HTMLElement;
+        }
+      }
+    }
+    
+    // Last resort: search all inputs and find the one that matches .time pattern
+    const allInputs = searchScope.querySelectorAll('input[name*="scheduleStartTime"], input[name*="schedule_start_time"]');
+    for (const input of Array.from(allInputs)) {
+      const inputName = (input as HTMLInputElement).name || input.getAttribute('name') || '';
+      if (inputName.includes('.time') && !inputName.includes('.date')) {
+        console.log(`[UAM Form Filler] Found input for "${name}" by searching all inputs - actual field name: "${inputName}"`);
+        return input as HTMLElement;
+      }
+    }
+    
+    console.log(`[UAM Form Filler] Could not find time field for "${name}"`);
+  }
+
+  if (name === 'bidValue') {
+    console.log(`[UAM Form Filler] Searching for bidValue (looking for bid_value)...`);
+    // Direct search for the actual field name
+    const directElement = searchScope.querySelector('input[name="bid_value"], input[name="bidValue"], input[name="bid-value"]');
+    if (directElement) {
+      const foundName = (directElement as HTMLInputElement).name || directElement.getAttribute('name') || 'unknown';
+      console.log(`[UAM Form Filler] Found input for "${name}" using direct search - actual field name: "${foundName}"`);
+      return directElement as HTMLElement;
+    }
+    
+    const alternatives = [
+      'bid_value',
+      'bidValue',
+      'bid-value',
+      'cpmBid',
+      'cpm_bid',
+      'cpm-bid',
+    ];
+    
+    for (const altName of alternatives) {
+      for (const selector of selectors) {
+        const altSelector = selector.replace(name, altName);
+        const element = searchScope.querySelector(altSelector);
+        if (element) {
+          const foundName = (element as HTMLInputElement).name || element.getAttribute('name') || 'unknown';
+          console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector} - actual field name: "${foundName}"`);
           return element as HTMLElement;
         }
       }
@@ -548,9 +727,45 @@ function setInputValue(element: HTMLElement, value: any): boolean {
         }
         
       } else if (inputType === 'checkbox' || inputType === 'radio') {
-        input.checked = Boolean(value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        // For radio buttons, we need to find the correct one in the group
+        if (inputType === 'radio') {
+          const radioName = input.name;
+          const valueToSet = String(value).toUpperCase(); // Normalize to uppercase for status values
+          console.log(`[UAM Form Filler] Looking for radio button with name="${radioName}" and value matching "${valueToSet}"`);
+          
+          // Find all radio buttons in the same group
+          const radioGroup = document.querySelectorAll(`input[type="radio"][name="${radioName}"]`);
+          let foundMatch = false;
+          
+          for (const radio of Array.from(radioGroup)) {
+            const radioInput = radio as HTMLInputElement;
+            const radioValue = radioInput.value?.toUpperCase() || '';
+            console.log(`[UAM Form Filler] Checking radio button: value="${radioInput.value}", matches="${radioValue === valueToSet}"`);
+            
+            if (radioValue === valueToSet || radioInput.value === value) {
+              console.log(`[UAM Form Filler] Found matching radio button, clicking it`);
+              radioInput.checked = true;
+              radioInput.dispatchEvent(new Event('input', { bubbles: true }));
+              radioInput.dispatchEvent(new Event('change', { bubbles: true }));
+              radioInput.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+              foundMatch = true;
+              break;
+            }
+          }
+          
+          if (!foundMatch) {
+            console.log(`[UAM Form Filler] No matching radio button found for value "${valueToSet}", trying first unchecked approach`);
+            // Fallback: just check the first one if no match found
+            input.checked = Boolean(value);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        } else {
+          // Checkbox handling
+          input.checked = Boolean(value);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       } else if (inputType === 'number') {
         const valueToSet = String(value);
         // Use native setter to bypass React's controlled component
@@ -1256,8 +1471,10 @@ function isEmptyOrDefault(value: string, fieldName: string): boolean {
   const trimmedValue = value.trim();
   const lowerValue = trimmedValue.toLowerCase();
   
+  console.log(`[UAM Form Filler] isEmptyOrDefault check: value="${value}", fieldName="${fieldName}", lowerValue="${lowerValue}"`);
+  
   // Budget field defaults - check various formats including whitespace
-  if (fieldName.includes('budget') || fieldName.includes('lifetime') || fieldName.includes('spend')) {
+  if (fieldName.includes('budget') || fieldName.includes('lifetime') || fieldName.includes('spend') || fieldName.includes('goal')) {
     // Remove all whitespace and currency symbols for comparison
     const normalized = trimmedValue.replace(/\s/g, '').replace(/\$/g, '').replace(/,/g, '');
     const normalizedLower = normalized.toLowerCase();
@@ -1280,6 +1497,23 @@ function isEmptyOrDefault(value: string, fieldName: string): boolean {
     }
     
     return false;
+  }
+  
+  // Adgroup name default
+  if (fieldName.toLowerCase().includes('adgroup') && fieldName.toLowerCase().includes('name')) {
+    const normalizedName = lowerValue.replace(/\s+/g, ' ').trim();
+    // Check multiple variations of the default adgroup name
+    const isDefault = normalizedName === 'ad group name' || 
+                     normalizedName === 'adgroup name' || 
+                     lowerValue === 'ad group name' ||
+                     lowerValue === 'adgroup name' ||
+                     lowerValue.includes('ad group name') || 
+                     lowerValue.includes('adgroup name');
+    console.log(`[UAM Form Filler] isEmptyOrDefault: Checking adgroup name - normalizedName="${normalizedName}", lowerValue="${lowerValue}", isDefault=${isDefault}`);
+    if (isDefault) {
+      console.log(`[UAM Form Filler] isEmptyOrDefault: Recognizing "${value}" as default adgroup name`);
+      return true;
+    }
   }
   
   // Other common defaults
@@ -1490,9 +1724,301 @@ export function fillEditForm(formData: Record<string, any>): { success: boolean;
     }
   }
 
-  // TODO: Add adgroup and ad edit logic when needed
+  // For adgroup edit pages, fill adgroup-specific fields
   if (isAdgroupEdit) {
-    console.log('[UAM Form Filler] Adgroup edit page - not yet implemented');
+    const adgroupFields = ['adgroupName', 'adgroupOperationStatus', 'adgroupBudget', 'scheduleStartDate', 'scheduleStartTime', 'bidValue'];
+    const processedFields = new Set<string>(); // Track which actual HTML fields we've already processed
+    
+    for (const fieldName of adgroupFields) {
+      if (!formData[fieldName]) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" not in form data, skipping`);
+        continue; // Skip if not in form data
+      }
+
+      console.log(`[UAM Form Filler] Attempting to find field: "${fieldName}"`);
+      const element = findInputByName(fieldName, false); // Edit pages don't have a modal
+      
+      if (element) {
+        const actualFieldName = (element as HTMLInputElement).name || element.getAttribute('name') || '';
+        // Check if we've already processed this actual HTML field (prevent setting same field twice)
+        if (processedFields.has(actualFieldName)) {
+          console.log(`[UAM Form Filler] Field "${actualFieldName}" already processed, skipping duplicate`);
+          continue;
+        }
+        processedFields.add(actualFieldName);
+      }
+      
+      if (!element) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" not found on edit page`);
+        // Try searching by label text as fallback
+        const labels = Array.from(document.querySelectorAll('label, [class*="label"], [class*="Label"]'));
+        let foundViaLabel = false;
+        
+        for (const label of labels) {
+          const labelText = label.textContent?.toLowerCase() || '';
+          
+          if (fieldName === 'adgroupName' && (labelText.includes('adgroup') || labelText.includes('ad group')) && labelText.includes('name')) {
+            console.log(`[UAM Form Filler] Found potential label for adgroupName: "${label.textContent}"`);
+            const associatedInput = label.querySelector('input, textarea, [role="textbox"]') || 
+                                   document.querySelector(`#${label.getAttribute('for')}`) ||
+                                   label.nextElementSibling?.querySelector('input, textarea, [role="textbox"]');
+            if (associatedInput) {
+              console.log(`[UAM Form Filler] Found input via label:`, associatedInput);
+              const currentValue = getFieldValue(associatedInput as HTMLElement);
+              console.log(`[UAM Form Filler] Current value via label: "${currentValue}"`);
+              if (isEmptyOrDefault(currentValue, fieldName)) {
+                const success = setInputValue(associatedInput as HTMLElement, formData[fieldName]);
+                if (success) {
+                  successes.push(fieldName);
+                  console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} via label`);
+                  foundViaLabel = true;
+                  break;
+                } else {
+                  console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} via label`);
+                }
+              } else {
+                console.log(`[UAM Form Filler] Field "${fieldName}" already has value via label: "${currentValue}", skipping`);
+                skipped.push(fieldName);
+                foundViaLabel = true;
+                break;
+              }
+            }
+          }
+          
+          if (fieldName === 'adgroupBudget' && (labelText.includes('budget') || labelText.includes('spend'))) {
+            console.log(`[UAM Form Filler] Found potential label for budget: "${label.textContent}"`);
+            // Try multiple ways to find the associated input
+            let associatedInput = label.querySelector('input, textarea, [role="textbox"], [contenteditable="true"]');
+            if (!associatedInput && label.getAttribute('for')) {
+              associatedInput = document.querySelector(`#${label.getAttribute('for')}`);
+            }
+            if (!associatedInput) {
+              // Try next sibling
+              associatedInput = label.nextElementSibling?.querySelector('input, textarea, [role="textbox"], [contenteditable="true"]') as HTMLElement;
+            }
+            if (!associatedInput) {
+              // Try parent container
+              const parent = label.closest('div, form, section');
+              if (parent) {
+                associatedInput = parent.querySelector('input, textarea, [role="textbox"], [contenteditable="true"]') as HTMLElement;
+              }
+            }
+            
+            if (associatedInput) {
+              console.log(`[UAM Form Filler] Found input via label:`, associatedInput);
+              const currentValue = getFieldValue(associatedInput as HTMLElement);
+              console.log(`[UAM Form Filler] Budget current value via label: "${currentValue}"`);
+              // Use the actual field name from the input (spend_cap) for isEmptyOrDefault check
+              const inputName = (associatedInput as HTMLInputElement).name || associatedInput.getAttribute('name') || '';
+              const checkFieldName = inputName || fieldName; // Use input name if available, otherwise use fieldName
+              console.log(`[UAM Form Filler] Checking isEmptyOrDefault with fieldName: "${checkFieldName}"`);
+              const isEmpty = isEmptyOrDefault(currentValue, checkFieldName);
+              console.log(`[UAM Form Filler] Budget isEmptyOrDefault via label: ${isEmpty} (value: "${currentValue}", fieldName: "${checkFieldName}")`);
+              
+              if (isEmpty) {
+                const budgetValue = formData[fieldName];
+                console.log(`[UAM Form Filler] Setting budget to ${budgetValue} via label (was: "${currentValue}")`);
+                const success = setInputValue(associatedInput as HTMLElement, budgetValue);
+                if (success) {
+                  successes.push(fieldName);
+                  console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} via label`);
+                  foundViaLabel = true;
+                  break;
+                } else {
+                  console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} via label`);
+                  errors.push(fieldName);
+                  foundViaLabel = true;
+                  break;
+                }
+              } else {
+                console.log(`[UAM Form Filler] Budget already has value via label: "${currentValue}", skipping`);
+                skipped.push(fieldName);
+                foundViaLabel = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (foundViaLabel) {
+          continue; // Skip to next field since we handled this one via label
+        }
+        
+        // Field not found at all
+        console.log(`[UAM Form Filler] Field "${fieldName}" not found by name or label`);
+        continue;
+      }
+
+      console.log(`[UAM Form Filler] Found element for "${fieldName}":`, element);
+
+      // Check if field is enabled
+      const isEnabled = isFieldEnabled(element);
+      console.log(`[UAM Form Filler] Field "${fieldName}" enabled: ${isEnabled}`);
+      if (!isEnabled) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" is disabled, skipping`);
+        skipped.push(fieldName);
+        continue;
+      }
+
+      // Special handling for radio buttons (operation status)
+      if (fieldName === 'adgroupOperationStatus' && element.tagName === 'INPUT' && (element as HTMLInputElement).type === 'radio') {
+        const radioName = (element as HTMLInputElement).name;
+        console.log(`[UAM Form Filler] Checking radio button group "${radioName}" for any selected value`);
+        
+        // Find all radio buttons in the group
+        const radioGroup = document.querySelectorAll(`input[type="radio"][name="${radioName}"]`);
+        let anyValueSelected = false;
+        let selectedValue = '';
+        
+        for (const radio of Array.from(radioGroup)) {
+          const radioInput = radio as HTMLInputElement;
+          if (radioInput.checked) {
+            anyValueSelected = true;
+            selectedValue = radioInput.value || '';
+            console.log(`[UAM Form Filler] Found selected radio button: value="${selectedValue}"`);
+            break;
+          }
+        }
+        
+        // Only fill if no value is currently selected
+        if (anyValueSelected) {
+          console.log(`[UAM Form Filler] Field "${fieldName}" already has a value selected ("${selectedValue}"), skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        
+        // Fill the field with the desired value only if nothing is selected
+        const value = formData[fieldName];
+        console.log(`[UAM Form Filler] No value selected, filling "${fieldName}" with value:`, value);
+        const success = setInputValue(element, value);
+        if (success) {
+          successes.push(fieldName);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName}`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName}`);
+        }
+        continue;
+      }
+
+      // Get current value
+      const currentValue = getFieldValue(element);
+      const actualFieldName = (element as HTMLInputElement).name || element.getAttribute('name') || 'unknown';
+      console.log(`[UAM Form Filler] Field "${fieldName}" (actual HTML name: "${actualFieldName}") current value: "${currentValue}"`);
+      
+      // Special handling for date field - only set if empty
+      if (fieldName === 'scheduleStartDate') {
+        // Check if date field has a value (any non-empty value means it's already set)
+        if (currentValue && currentValue.trim() !== '') {
+          console.log(`[UAM Form Filler] Date field "${actualFieldName}" already has a value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        // Only set if empty
+        const dateValue = formData[fieldName];
+        console.log(`[UAM Form Filler] Date field "${actualFieldName}" is empty, setting to: "${dateValue}"`);
+        const success = setInputValue(element, dateValue);
+        if (success) {
+          successes.push(`${fieldName} (${actualFieldName})`);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} (${actualFieldName}) to "${dateValue}"`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
+        }
+        continue;
+      }
+      
+      // Special handling for time field - only set if empty
+      if (fieldName === 'scheduleStartTime') {
+        // Check if time field has a value (any non-empty value is considered a default)
+        if (currentValue && currentValue.trim() !== '') {
+          console.log(`[UAM Form Filler] Time field "${actualFieldName}" already has a value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        // Only set if empty
+        const timeValue = formData[fieldName];
+        console.log(`[UAM Form Filler] Time field "${actualFieldName}" is empty, setting to: "${timeValue}"`);
+        const success = setInputValue(element, timeValue);
+        if (success) {
+          successes.push(`${fieldName} (${actualFieldName})`);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} (${actualFieldName}) to "${timeValue}"`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
+        }
+        continue;
+      }
+      
+      // Special handling for bid value field - only set if empty
+      if (fieldName === 'bidValue') {
+        // Check if bid field has a value (any non-empty value means it's already set)
+        if (currentValue && currentValue.trim() !== '') {
+          console.log(`[UAM Form Filler] Bid field "${actualFieldName}" already has a value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        // Only set if empty
+        const bidValue = formData[fieldName];
+        console.log(`[UAM Form Filler] Bid field "${actualFieldName}" is empty, setting to: "${bidValue}"`);
+        const success = setInputValue(element, bidValue);
+        if (success) {
+          successes.push(`${fieldName} (${actualFieldName})`);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName} (${actualFieldName}) to "${bidValue}"`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
+        }
+        continue;
+      }
+      
+      // Special handling for budget field
+      if (fieldName === 'adgroupBudget') {
+        // Use the actual input name for isEmptyOrDefault check
+        const inputName = (element as HTMLInputElement).name || element.getAttribute('name') || '';
+        const checkFieldName = inputName || fieldName;
+        const isEmpty = isEmptyOrDefault(currentValue, checkFieldName);
+        console.log(`[UAM Form Filler] Budget field isEmptyOrDefault: ${isEmpty} (value: "${currentValue}", checkFieldName: "${checkFieldName}")`);
+        if (!isEmpty) {
+          console.log(`[UAM Form Filler] Budget field already has value: "${currentValue}", skipping`);
+          skipped.push(fieldName);
+          continue;
+        }
+        // Set to form data value if empty or $0.00
+        const budgetValue = formData[fieldName];
+        console.log(`[UAM Form Filler] Setting budget to ${budgetValue} (was: "${currentValue}")`);
+        const success = setInputValue(element, budgetValue);
+        if (success) {
+          successes.push(fieldName);
+          console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName}`);
+        } else {
+          errors.push(fieldName);
+          console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName}`);
+        }
+        continue;
+      }
+
+      // For other fields, check if empty or default
+      const isEmpty = isEmptyOrDefault(currentValue, fieldName);
+      console.log(`[UAM Form Filler] Field "${fieldName}" isEmptyOrDefault: ${isEmpty}`);
+      if (!isEmpty) {
+        console.log(`[UAM Form Filler] Field "${fieldName}" already has value: "${currentValue}", skipping`);
+        skipped.push(fieldName);
+        continue;
+      }
+
+      // Fill the field
+      const value = formData[fieldName];
+      console.log(`[UAM Form Filler] Filling "${fieldName}" with value:`, value);
+      const success = setInputValue(element, value);
+      if (success) {
+        successes.push(fieldName);
+        console.log(`[UAM Form Filler] ✓ Successfully set ${fieldName}`);
+      } else {
+        errors.push(fieldName);
+        console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName}`);
+      }
+    }
   }
 
   if (isAdEdit) {
