@@ -628,6 +628,129 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
   return null;
 }
 
+async function uploadImageIfNeeded(): Promise<boolean> {
+  console.log('[UAM Form Filler] Checking if image upload is needed...');
+  
+  // Look for the "Add Image" span element
+  const addImageSpan = Array.from(document.querySelectorAll('span')).find(el => {
+    const text = el.textContent?.trim() || '';
+    return text === 'Add Image';
+  });
+  
+  if (!addImageSpan) {
+    console.log('[UAM Form Filler] "Add Image" span not found, skipping image upload');
+    return false;
+  }
+  
+  console.log('[UAM Form Filler] Found "Add Image" span, clicking it...');
+  (addImageSpan as HTMLElement).click();
+  
+  // Wait for the upload dialog/modal to appear
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Find "Select from your files" element
+  const selectFilesButton = Array.from(document.querySelectorAll('span, button, label, a')).find(el => {
+    const text = el.textContent?.trim() || '';
+    return text === 'Select from your files' || text.toLowerCase().includes('select from your files');
+  });
+  
+  if (!selectFilesButton) {
+    console.log('[UAM Form Filler] "Select from your files" button not found');
+    return false;
+  }
+  
+  console.log('[UAM Form Filler] Found "Select from your files" button, clicking it...');
+  (selectFilesButton as HTMLElement).click();
+  
+  // Wait a bit for file input to appear
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Find the file input (could be hidden)
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  if (!fileInput) {
+    console.log('[UAM Form Filler] File input not found');
+    return false;
+  }
+  
+  console.log('[UAM Form Filler] Found file input, creating placeholder image...');
+  
+  // Create a placeholder image (minimum 140x140 pixels)
+  const canvas = document.createElement('canvas');
+  canvas.width = 140;
+  canvas.height = 140;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(0, 0, 140, 140);
+    ctx.fillStyle = '#666666';
+    ctx.font = '16px Arial';
+    ctx.fillText('Test Image', 30, 70);
+  }
+  
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      console.log('[UAM Form Filler] Failed to create image blob');
+      return;
+    }
+    
+    const file = new File([blob], 'test-image.png', { type: 'image/png' });
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    fileInput.files = dataTransfer.files;
+    
+    // Trigger change event
+    const changeEvent = new Event('change', { bubbles: true });
+    fileInput.dispatchEvent(changeEvent);
+    
+    console.log('[UAM Form Filler] File set on input, waiting for upload button...');
+    
+    // Wait for "Start Upload" button to appear
+    const checkUploadButton = setInterval(() => {
+      const startUploadButton = Array.from(document.querySelectorAll('button')).find(btn => {
+        const text = btn.textContent?.trim() || '';
+        return text === 'Start Upload' || text.toLowerCase().includes('start upload');
+      });
+      
+      if (startUploadButton) {
+        clearInterval(checkUploadButton);
+        console.log('[UAM Form Filler] Found "Start Upload" button, clicking it...');
+        (startUploadButton as HTMLButtonElement).click();
+        
+        // Wait for upload to complete and "Apply" button to appear
+        const checkApplyButton = setInterval(() => {
+          const applyButton = Array.from(document.querySelectorAll('button')).find(btn => {
+            const text = btn.textContent?.trim() || '';
+            const classes = btn.className || '';
+            return (text === 'Apply' || text.toLowerCase().includes('apply')) &&
+                   classes.includes('primary');
+          });
+          
+          if (applyButton) {
+            clearInterval(checkApplyButton);
+            console.log('[UAM Form Filler] Found "Apply" button, clicking it...');
+            (applyButton as HTMLButtonElement).click();
+            console.log('[UAM Form Filler] ✓ Image upload completed');
+          }
+        }, 500);
+        
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          clearInterval(checkApplyButton);
+          console.log('[UAM Form Filler] Timeout waiting for Apply button');
+        }, 30000);
+      }
+    }, 500);
+    
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      clearInterval(checkUploadButton);
+      console.log('[UAM Form Filler] Timeout waiting for Start Upload button');
+    }, 10000);
+  }, 'image/png');
+  
+  return true;
+}
+
 function setInputValue(element: HTMLElement, value: any): boolean {
   const tagName = element.tagName.toLowerCase();
   const inputType = (element as HTMLInputElement).type?.toLowerCase();
@@ -2621,6 +2744,12 @@ export function fillEditForm(formData: Record<string, any>): { success: boolean;
         console.log(`[UAM Form Filler] ✗ Failed to set ${fieldName} (${actualFieldName})`);
       }
     }
+    
+    // Handle image upload for ad edit pages
+    console.log('[UAM Form Filler] Checking if image upload is needed for ad...');
+    uploadImageIfNeeded().catch(err => {
+      console.error('[UAM Form Filler] Error uploading image:', err);
+    });
   }
 
   if (errors.length > 0) {
