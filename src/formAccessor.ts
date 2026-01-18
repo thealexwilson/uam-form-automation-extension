@@ -628,6 +628,85 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
   return null;
 }
 
+function findFileInputInModal(): HTMLInputElement | null {
+  console.log('[UAM Form Filler] Searching for file input in modal...');
+  
+  // Strategy 1: Direct query for file inputs
+  let fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  if (fileInput) {
+    console.log('[UAM Form Filler] Found file input via direct query');
+    return fileInput;
+  }
+  
+  // Strategy 2: Find modal/dialog containers and search within them
+  const modalSelectors = [
+    '[role="dialog"]',
+    '.modal',
+    '[class*="Modal"]',
+    '[class*="Dialog"]',
+    '[class*="modal"]',
+    '[class*="dialog"]',
+  ];
+  
+  for (const selector of modalSelectors) {
+    const modal = document.querySelector(selector);
+    if (modal) {
+      const inputInModal = modal.querySelector('input[type="file"]') as HTMLInputElement;
+      if (inputInModal) {
+        console.log(`[UAM Form Filler] Found file input in modal (${selector})`);
+        return inputInModal;
+      }
+    }
+  }
+  
+  // Strategy 3: Find "Select from your files" element and look for associated file input
+  const selectFilesButton = Array.from(document.querySelectorAll('span, button, label, a')).find(el => {
+    const text = el.textContent?.trim() || '';
+    return text === 'Select from your files' || text.toLowerCase().includes('select from your files');
+  });
+  
+  if (selectFilesButton) {
+    // Check if it's a label with htmlFor pointing to file input
+    if (selectFilesButton.tagName === 'LABEL' && (selectFilesButton as HTMLLabelElement).htmlFor) {
+      const associatedInput = document.getElementById((selectFilesButton as HTMLLabelElement).htmlFor) as HTMLInputElement;
+      if (associatedInput && associatedInput.type === 'file') {
+        console.log('[UAM Form Filler] Found file input via label htmlFor');
+        return associatedInput;
+      }
+    }
+    
+    // Check parent elements for file input
+    let parent = selectFilesButton.parentElement;
+    let attempts = 0;
+    while (parent && attempts < 5) {
+      const inputInParent = parent.querySelector('input[type="file"]') as HTMLInputElement;
+      if (inputInParent) {
+        console.log('[UAM Form Filler] Found file input in parent of "Select from your files"');
+        return inputInParent;
+      }
+      parent = parent.parentElement;
+      attempts++;
+    }
+    
+    // Check if the button/label contains the file input
+    const inputInButton = selectFilesButton.querySelector('input[type="file"]') as HTMLInputElement;
+    if (inputInButton) {
+      console.log('[UAM Form Filler] Found file input inside "Select from your files" element');
+      return inputInButton;
+    }
+  }
+  
+  // Strategy 4: Search all file inputs, even if hidden
+  const allFileInputs = Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
+  if (allFileInputs.length > 0) {
+    console.log(`[UAM Form Filler] Found ${allFileInputs.length} file input(s), using first one`);
+    return allFileInputs[0];
+  }
+  
+  console.log('[UAM Form Filler] File input not found in modal');
+  return null;
+}
+
 async function uploadImageIfNeeded(): Promise<boolean> {
   console.log('[UAM Form Filler] Checking if image upload is needed...');
   
@@ -648,28 +727,39 @@ async function uploadImageIfNeeded(): Promise<boolean> {
   // Wait for the upload dialog/modal to appear
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Find "Select from your files" element
-  const selectFilesButton = Array.from(document.querySelectorAll('span, button, label, a')).find(el => {
-    const text = el.textContent?.trim() || '';
-    return text === 'Select from your files' || text.toLowerCase().includes('select from your files');
-  });
+  // Try to find the file input BEFORE clicking "Select from your files" to bypass OS dialog
+  let fileInput = findFileInputInModal();
   
-  if (!selectFilesButton) {
-    console.log('[UAM Form Filler] "Select from your files" button not found');
-    return false;
-  }
-  
-  console.log('[UAM Form Filler] Found "Select from your files" button, clicking it...');
-  (selectFilesButton as HTMLElement).click();
-  
-  // Wait a bit for file input to appear
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Find the file input (could be hidden)
-  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
   if (!fileInput) {
-    console.log('[UAM Form Filler] File input not found');
-    return false;
+    // Fallback: If file input not found, use the original approach (click button, wait, then find)
+    console.log('[UAM Form Filler] File input not found initially, falling back to button click approach...');
+    
+    // Find "Select from your files" element
+    const selectFilesButton = Array.from(document.querySelectorAll('span, button, label, a')).find(el => {
+      const text = el.textContent?.trim() || '';
+      return text === 'Select from your files' || text.toLowerCase().includes('select from your files');
+    });
+    
+    if (!selectFilesButton) {
+      console.log('[UAM Form Filler] "Select from your files" button not found');
+      return false;
+    }
+    
+    console.log('[UAM Form Filler] Found "Select from your files" button, clicking it...');
+    (selectFilesButton as HTMLElement).click();
+    
+    // Wait a bit for file input to appear after clicking
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Try to find the file input again
+    fileInput = findFileInputInModal();
+    
+    if (!fileInput) {
+      console.log('[UAM Form Filler] File input not found after clicking button');
+      return false;
+    }
+  } else {
+    console.log('[UAM Form Filler] Found file input without clicking button - bypassing OS dialog!');
   }
   
   console.log('[UAM Form Filler] Found file input, creating placeholder image...');
