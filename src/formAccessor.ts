@@ -2329,8 +2329,8 @@ function checkUseExisting(entityType: 'campaign' | 'adgroup' | 'ad'): boolean {
     // Check if this radio button indicates "use existing" for the specific entity type
     let matchesEntity = false;
     if (entityType === 'campaign') {
-      // For campaign: look for campaign-related "use existing" or check campaignUpsert field
-      matchesEntity = (allText.includes('campaign') || radioName.includes('campaign') || radioName.includes('upsert')) &&
+      // For campaign: look for campaign-related "use existing"
+      matchesEntity = (allText.includes('campaign') || radioName.includes('campaign')) &&
                       ((allText.includes('use') && allText.includes('existing')) ||
                        allText.includes('existing') ||
                        radioValue === 'existing' ||
@@ -2394,23 +2394,12 @@ function checkUseExisting(entityType: 'campaign' | 'adgroup' | 'ad'): boolean {
     }
   }
 
-  // Special check for campaignUpsert field value (only for campaign)
-  if (entityType === 'campaign') {
-    const campaignUpsertInput = modal.querySelector('input[name="campaignUpsert"], input[name="campaign_upsert"], input[id*="campaignUpsert"]') as HTMLInputElement;
-    if (campaignUpsertInput) {
-      const value = campaignUpsertInput.value?.toLowerCase() || '';
-      if (value === 'existing' || value === 'use-existing' || value === 'use_existing') {
-        console.log(`[UAM Form Filler] Found campaign "use existing" via campaignUpsert field: value="${value}"`);
-        return true;
-      }
-    }
-  }
 
   console.log(`[UAM Form Filler] "${entityType}" use existing not found, assuming creating new`);
   return false;
 }
 
-export function fillForm(formData: Record<string, any>): { success: boolean; error?: string } {
+export function fillForm(formData: Record<string, any>): { success: boolean; error?: string; filledFields?: string[]; skippedFields?: string[] } {
   const modal = document.querySelector('#create-modal');
   if (!modal) {
     const error = 'Create modal not found. Please open the create campaign modal first.';
@@ -2433,7 +2422,6 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
   // Campaign section: if "use existing" is selected, skip campaign fields
   if (useExistingCampaign) {
     console.log('[UAM Form Filler] Campaign "use existing" is selected, skipping campaign fields');
-    delete filteredFormData.campaignUpsert;
     delete filteredFormData.campaignName;
     delete filteredFormData.objectiveType;
   }
@@ -2537,7 +2525,7 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
 
   if (errors.length > 0) {
     const errorMsg = `Failed to set fields: ${errors.join(', ')}. Successfully set: ${successes.join(', ')}`;
-    return { success: false, error: errorMsg };
+    return { success: false, error: errorMsg, filledFields: successes, skippedFields: skippedFields.length > 0 ? skippedFields : undefined };
   }
 
   // Handle image upload for ad forms (create modal)
@@ -2546,9 +2534,26 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
     console.error('[UAM Form Filler] Error uploading image:', err);
   });
 
+  // Use successes directly (no need to filter - all fields are user-visible)
+  const userVisibleFields = successes;
+  
+  // Reorder fields to match the actual fill order: Campaign Name, Objective Type, Adgroup Name, Ad Name
+  const fieldOrder = ['campaignName', 'objectiveType', 'adgroupName', 'adName'];
+  const orderedFields = fieldOrder.filter(field => userVisibleFields.includes(field));
+  const remainingFields = userVisibleFields.filter(field => !fieldOrder.includes(field));
+  const finalFilledFields = [...orderedFields, ...remainingFields];
+  
   console.log('[UAM Form Filler] Form filled successfully');
+  console.log('[UAM Form Filler] Successfully set:', successes.join(', '));
+  if (skippedFields.length > 0) {
+    console.log('[UAM Form Filler] Skipped:', skippedFields.join(', '));
+  }
   console.log('[UAM Form Filler] Final Form Data:', formData);
-  return { success: true };
+  return { 
+    success: true, 
+    filledFields: finalFilledFields,
+    skippedFields: skippedFields.length > 0 ? skippedFields : undefined
+  };
 }
 
 function isFieldEnabled(element: HTMLElement): boolean {
@@ -2663,7 +2668,7 @@ function isEmptyOrDefault(value: string, fieldName: string): boolean {
   return lowerValue === 'none' || lowerValue === 'select' || lowerValue === 'choose' || lowerValue === '--';
 }
 
-export function fillEditForm(formData: Record<string, any>): { success: boolean; error?: string } {
+export function fillEditForm(formData: Record<string, any>): { success: boolean; error?: string; filledFields?: string[]; skippedFields?: string[] } {
   console.log('[UAM Form Filler] Filling edit form with data:', formData);
 
   const errors: string[] = [];
@@ -3290,10 +3295,14 @@ export function fillEditForm(formData: Record<string, any>): { success: boolean;
 
   if (errors.length > 0) {
     const errorMsg = `Failed to set fields: ${errors.join(', ')}. Successfully set: ${successes.join(', ')}. Skipped: ${skipped.join(', ')}`;
-    return { success: false, error: errorMsg };
+    return { success: false, error: errorMsg, filledFields: successes, skippedFields: skipped.length > 0 ? skipped : undefined };
   }
 
   console.log('[UAM Form Filler] Edit form filled successfully');
   console.log(`[UAM Form Filler] Successfully set: ${successes.join(', ')}. Skipped: ${skipped.join(', ')}`);
-  return { success: true };
+  return { 
+    success: true, 
+    filledFields: successes,
+    skippedFields: skipped.length > 0 ? skipped : undefined
+  };
 }

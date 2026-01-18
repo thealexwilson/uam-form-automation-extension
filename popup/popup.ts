@@ -37,7 +37,6 @@ const generateFormData = (namePrefix: string = '') => {
   const datetime = getCurrentDateTimeString();
   
   return {
-    campaignUpsert: 'new' as const,
     campaignName: `${prefix}Test Reddit Campaign ${datetime}`,
     adgroupName: `${prefix}Test Reddit Adgroup ${datetime}`,
     adName: `${prefix}Test Reddit Ad ${datetime}`,
@@ -206,8 +205,51 @@ async function fillForm() {
     }
 
     if (response?.success) {
-      statusEl.textContent = 'Form filled successfully!';
-      statusEl.className = 'status success';
+      // Build a detailed success message showing what was filled
+      const filledFields = response.filledFields || [];
+      const skippedFields = response.skippedFields || [];
+      
+      // Check if no fields were actually filled (all were skipped or already had values)
+      if (filledFields.length === 0) {
+        statusEl.textContent = 'No changes made - all fields already filled';
+        statusEl.className = 'status warning';
+      } else {
+        let message = 'Form filled successfully!';
+        
+        // Map field names to user-friendly display names
+        const fieldDisplayNames: Record<string, string> = {
+          'campaignName': 'Campaign Name',
+          'objectiveType': 'Campaign Objective Type',
+          'adgroupName': 'Adgroup Name',
+          'adName': 'Ad Name'
+        };
+        
+        // Format field names for display
+        const formattedFields = filledFields.map((field: string) => {
+          // Use display name if available, otherwise convert camelCase to readable format
+          if (fieldDisplayNames[field]) {
+            return fieldDisplayNames[field];
+          }
+          return field
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, (str: string) => str.toUpperCase())
+            .trim();
+        });
+        message += `\n\nFilled: ${formattedFields.join(', ')}`;
+        
+        if (skippedFields.length > 0) {
+          const formattedSkipped = skippedFields.map((field: string) => {
+            return field
+              .replace(/([A-Z])/g, ' $1')
+              .replace(/^./, (str: string) => str.toUpperCase())
+              .trim();
+          });
+          message += `\n\nSkipped: ${formattedSkipped.join(', ')}`;
+        }
+        
+        statusEl.textContent = message;
+        statusEl.className = 'status success';
+      }
     } else {
       const errorMsg = response?.error || 'Failed to fill form. Make sure the create modal is open.';
       statusEl.textContent = `Error: ${errorMsg}`;

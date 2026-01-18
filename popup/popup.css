@@ -82,11 +82,19 @@ h2 {
   font-size: 12px;
   border-radius: 4px;
   min-height: 16px;
+  white-space: pre-line;
+  line-height: 1.5;
 }
 
 .status.success {
   background: #e6f7e6;
   color: #2d5016;
+}
+
+.status.warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
 }
 
 .status.error {
