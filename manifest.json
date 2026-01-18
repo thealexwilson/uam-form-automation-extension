@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UAM Form Automation (MVP)",
   "version": "0.1.0",
-  "description": "Automate filling UAM Reddit campaign creation forms",
+  "description": "Automate filling UAM Reddit forms for campaigns, ad groups, and ads",
   "permissions": [
     "activeTab"
   ],

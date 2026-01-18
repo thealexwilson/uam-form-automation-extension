@@ -188,9 +188,61 @@ async function fillForm() {
   }
 }
 
+function getEntityTypeFromUrl(url: string): 'campaigns' | 'adgroups' | 'ads' | null {
+  if (!url || !url.includes('localhost:3000/uam')) {
+    return null;
+  }
+  
+  if (url.includes('/ads/')) {
+    return 'ads';
+  } else if (url.includes('/adgroups/') || url.includes('/ad-groups/')) {
+    return 'adgroups';
+  } else if (url.includes('/campaigns/')) {
+    return 'campaigns';
+  }
+  
+  return null;
+}
+
+function getEntityDisplayName(entityType: 'campaigns' | 'adgroups' | 'ads' | null): string {
+  switch (entityType) {
+    case 'ads':
+      return 'Reddit Ads';
+    case 'adgroups':
+      return 'Reddit Ad Groups';
+    case 'campaigns':
+      return 'Reddit Campaigns';
+    default:
+      return 'Reddit Form Filler';
+  }
+}
+
+async function updateSubtitle() {
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (tab.url) {
+      const entityType = getEntityTypeFromUrl(tab.url);
+      const displayName = getEntityDisplayName(entityType);
+      
+      const subtitleEl = document.getElementById('entitySubtitle');
+      if (subtitleEl) {
+        subtitleEl.textContent = displayName;
+      }
+    }
+  } catch (error) {
+    console.error('[UAM Form Filler] Error updating subtitle:', error);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const fillButton = document.getElementById('fillForm');
   if (fillButton) {
     fillButton.addEventListener('click', fillForm);
   }
+  
+  updateSubtitle();
 });
