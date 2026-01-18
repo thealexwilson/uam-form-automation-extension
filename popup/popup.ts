@@ -32,54 +32,82 @@ const getCurrentTimeString = (): string => {
   return '12:00';
 };
 
-const REDDIT_CAMPAIGN_FORM_DATA = {
-  campaignUpsert: 'new' as const,
-  campaignName: `Test Reddit Campaign ${getCurrentDateTimeString()}`,
-  adgroupName: `Test Reddit Adgroup ${getCurrentDateTimeString()}`,
-  adName: `Test Reddit Ad ${getCurrentDateTimeString()}`,
-  objectiveType: {
-    value: 'AWARENESS',
-    label: 'Awareness',
-  },
+const generateFormData = (namePrefix: string = '') => {
+  const prefix = namePrefix.trim() ? `${namePrefix.trim()} ` : '';
+  const datetime = getCurrentDateTimeString();
+  
+  return {
+    campaignUpsert: 'new' as const,
+    campaignName: `${prefix}Test Reddit Campaign ${datetime}`,
+    adgroupName: `${prefix}Test Reddit Adgroup ${datetime}`,
+    adName: `${prefix}Test Reddit Ad ${datetime}`,
+    objectiveType: {
+      value: 'AWARENESS',
+      label: 'Awareness',
+    },
+  };
 };
 
-const REDDIT_CAMPAIGN_EDIT_FORM_DATA = {
-  campaignName: `Test Reddit Campaign ${getCurrentDateTimeString()}`,
-  campaignOperationStatus: 'ACTIVE', // Default operation status
-  campaignLifetimeBudget: '$100', // Will be set if empty or $0.00
-  objectiveType: {
-    value: 'AWARENESS',
-    label: 'Awareness',
-  },
+const REDDIT_CAMPAIGN_FORM_DATA = generateFormData();
+
+const generateCampaignEditFormData = (namePrefix: string = '') => {
+  const prefix = namePrefix.trim() ? `${namePrefix.trim()} ` : '';
+  const datetime = getCurrentDateTimeString();
+  
+  return {
+    campaignName: `${prefix}Test Reddit Campaign ${datetime}`,
+    campaignOperationStatus: 'ACTIVE', // Default operation status
+    campaignLifetimeBudget: '$100', // Will be set if empty or $0.00
+    objectiveType: {
+      value: 'AWARENESS',
+      label: 'Awareness',
+    },
+  };
 };
 
-const REDDIT_ADGROUP_EDIT_FORM_DATA = {
-  adgroupName: `Test Reddit Adgroup ${getCurrentDateTimeString()}`,
-  adgroupOperationStatus: 'ACTIVE', // Default operation status
-  adgroupBudget: '$100', // Will be set if empty or $0.00
-  scheduleStartDate: getCurrentDateString(), // Start date in MM/DD/YYYY format (one week from today)
-  scheduleStartTime: getCurrentTimeString(), // Start time in HH:MM format (only set if empty)
-  bidValue: '5', // CPM Bid value - will be set if empty
+const REDDIT_CAMPAIGN_EDIT_FORM_DATA = generateCampaignEditFormData();
+
+const generateAdgroupEditFormData = (namePrefix: string = '') => {
+  const prefix = namePrefix.trim() ? `${namePrefix.trim()} ` : '';
+  const datetime = getCurrentDateTimeString();
+  
+  return {
+    adgroupName: `${prefix}Test Reddit Adgroup ${datetime}`,
+    adgroupOperationStatus: 'ACTIVE', // Default operation status
+    adgroupBudget: '$100', // Will be set if empty or $0.00
+    scheduleStartDate: getCurrentDateString(), // Start date in MM/DD/YYYY format (one week from today)
+    scheduleStartTime: getCurrentTimeString(), // Start time in HH:MM format (only set if empty)
+    bidValue: '5', // CPM Bid value - will be set if empty
+  };
 };
 
-const REDDIT_AD_EDIT_FORM_DATA = {
-  adName: `Test Reddit Ad ${getCurrentDateTimeString()}`,
-  postType: {
-    value: 'IMAGE', // Default post type - adjust as needed
-    label: 'Image',
-  },
-  profile: {
-    value: '', // Will need to be set based on available options
-    label: '',
-  },
-  headline: `Test Headline ${getCurrentDateTimeString()}`,
-  callToAction: {
-    value: 'LEARN_MORE', // Default CTA - adjust as needed
-    label: 'Learn More',
-  },
-  destinationUrl: 'https://example.com',
-  displayUrl: 'example.com',
+const REDDIT_ADGROUP_EDIT_FORM_DATA = generateAdgroupEditFormData();
+
+const generateAdEditFormData = (namePrefix: string = '') => {
+  const prefix = namePrefix.trim() ? `${namePrefix.trim()} ` : '';
+  const datetime = getCurrentDateTimeString();
+  
+  return {
+    adName: `${prefix}Test Reddit Ad ${datetime}`,
+    postType: {
+      value: 'IMAGE', // Default post type - adjust as needed
+      label: 'Image',
+    },
+    profile: {
+      value: '', // Will need to be set based on available options
+      label: '',
+    },
+    headline: `${prefix}Test Headline ${datetime}`,
+    callToAction: {
+      value: 'LEARN_MORE', // Default CTA - adjust as needed
+      label: 'Learn More',
+    },
+    destinationUrl: 'https://example.com',
+    displayUrl: 'example.com',
+  };
 };
+
+const REDDIT_AD_EDIT_FORM_DATA = generateAdEditFormData();
 
 async function fillForm() {
   const fillButton = document.getElementById('fillForm') as HTMLButtonElement;
@@ -148,16 +176,23 @@ async function fillForm() {
       if (isEditPage) {
         // Determine entity type from URL
         const url = tab.url || '';
+        // Get the name prefix from the input field
+        const namePrefixInput = document.getElementById('namePrefix') as HTMLInputElement;
+        const namePrefix = namePrefixInput?.value?.trim() || '';
+        
         if (url.includes('/ads/')) {
-          formData = REDDIT_AD_EDIT_FORM_DATA;
+          formData = generateAdEditFormData(namePrefix);
         } else if (url.includes('/adgroups/') || url.includes('/ad-groups/')) {
-          formData = REDDIT_ADGROUP_EDIT_FORM_DATA;
+          formData = generateAdgroupEditFormData(namePrefix);
         } else {
           // Default to campaign edit form data
-          formData = REDDIT_CAMPAIGN_EDIT_FORM_DATA;
+          formData = generateCampaignEditFormData(namePrefix);
         }
       } else {
-        formData = REDDIT_CAMPAIGN_FORM_DATA;
+        // Get the name prefix from the input field
+        const namePrefixInput = document.getElementById('namePrefix') as HTMLInputElement;
+        const namePrefix = namePrefixInput?.value?.trim() || '';
+        formData = generateFormData(namePrefix);
       }
       response = await chrome.tabs.sendMessage(tab.id, {
         action: 'fillForm',
@@ -238,11 +273,60 @@ async function updateSubtitle() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const fillButton = document.getElementById('fillForm');
-  if (fillButton) {
-    fillButton.addEventListener('click', fillForm);
+  // Load saved name prefix from storage
+  async function loadSavedNamePrefix() {
+    try {
+      const result = await chrome.storage.local.get(['namePrefix']);
+      console.log('[UAM Form Filler] Loaded name prefix from storage:', result.namePrefix);
+      const namePrefixInput = document.getElementById('namePrefix') as HTMLInputElement;
+      if (namePrefixInput) {
+        if (result.namePrefix) {
+          namePrefixInput.value = result.namePrefix;
+          console.log('[UAM Form Filler] Restored name prefix:', result.namePrefix);
+        } else {
+          console.log('[UAM Form Filler] No saved name prefix found');
+        }
+      } else {
+        console.error('[UAM Form Filler] Name prefix input element not found');
+      }
+    } catch (error) {
+      console.error('[UAM Form Filler] Error loading saved name prefix:', error);
+    }
   }
-  
-  updateSubtitle();
-});
+
+  // Save name prefix to storage
+  async function saveNamePrefix(prefix: string) {
+    try {
+      await chrome.storage.local.set({ namePrefix: prefix });
+      console.log('[UAM Form Filler] Saved name prefix to storage:', prefix);
+    } catch (error) {
+      console.error('[UAM Form Filler] Error saving name prefix:', error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const fillButton = document.getElementById('fillForm');
+    if (fillButton) {
+      fillButton.addEventListener('click', fillForm);
+    }
+    
+    // Load saved name prefix when popup opens
+    loadSavedNamePrefix();
+    
+    // Save name prefix whenever user types in the input field
+    const namePrefixInput = document.getElementById('namePrefix') as HTMLInputElement;
+    if (namePrefixInput) {
+      namePrefixInput.addEventListener('input', (e) => {
+        const value = (e.target as HTMLInputElement).value;
+        saveNamePrefix(value);
+      });
+      
+      // Also save on blur (when user clicks away)
+      namePrefixInput.addEventListener('blur', (e) => {
+        const value = (e.target as HTMLInputElement).value;
+        saveNamePrefix(value);
+      });
+    }
+    
+    updateSubtitle();
+  });
