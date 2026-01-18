@@ -741,19 +741,86 @@ function findFileInputInModal(): HTMLInputElement | null {
 async function uploadImageIfNeeded(): Promise<boolean> {
   console.log('[UAM Form Filler] Checking if image upload is needed...');
   
-  // Look for the "Add Image" span element
-  const addImageSpan = Array.from(document.querySelectorAll('span')).find(el => {
+  // First, try to find within the create modal (for create forms)
+  let searchScope: Document | Element = document;
+  const modal = document.querySelector('#create-modal');
+  if (modal) {
+    searchScope = modal;
+    console.log('[UAM Form Filler] Searching for "Add Image" within create modal...');
+  } else {
+    console.log('[UAM Form Filler] No create modal found, searching entire document...');
+  }
+  
+  // Look for the "Add Image" span or button element, but only for "Ad Image" (not "Thumbnail Image")
+  // We need to check the context to ensure it's the Ad Image field, not the Thumbnail Image field
+  const addImageElements = Array.from(searchScope.querySelectorAll('span, button')).filter(el => {
     const text = el.textContent?.trim() || '';
     return text === 'Add Image';
   });
   
-  if (!addImageSpan) {
-    console.log('[UAM Form Filler] "Add Image" span not found, skipping image upload');
+  console.log(`[UAM Form Filler] Found ${addImageElements.length} "Add Image" elements`);
+  
+  // Find the one associated with "Ad Image" by checking parent/ancestor elements for "Ad Image" text
+  let adImageElement: HTMLElement | null = null;
+  for (const el of addImageElements) {
+    // Check parent elements for "Ad Image" label/text (but not "Thumbnail Image")
+    let current: Element | null = el.parentElement;
+    let foundAdImage = false;
+    let foundThumbnail = false;
+    
+    // Check up to 5 levels up the DOM tree
+    for (let i = 0; i < 5 && current; i++) {
+      const parentText = current.textContent?.toLowerCase() || '';
+      if (parentText.includes('ad image') && !parentText.includes('thumbnail')) {
+        foundAdImage = true;
+        break;
+      }
+      if (parentText.includes('thumbnail image')) {
+        foundThumbnail = true;
+        break;
+      }
+      current = current.parentElement;
+    }
+    
+    if (foundAdImage && !foundThumbnail) {
+      adImageElement = el as HTMLElement;
+      console.log('[UAM Form Filler] Found "Add Image" element for Ad Image');
+      break;
+    }
+  }
+  
+  // If we didn't find one specifically for Ad Image, try to find one that's NOT near "Thumbnail"
+  if (!adImageElement) {
+    for (const el of addImageElements) {
+      let current: Element | null = el.parentElement;
+      let foundThumbnail = false;
+      
+      // Check up to 5 levels up for "Thumbnail" text
+      for (let i = 0; i < 5 && current; i++) {
+        const parentText = current.textContent?.toLowerCase() || '';
+        if (parentText.includes('thumbnail')) {
+          foundThumbnail = true;
+          break;
+        }
+        current = current.parentElement;
+      }
+      
+      // If this element is NOT near "Thumbnail", assume it's the Ad Image one
+      if (!foundThumbnail) {
+        adImageElement = el as HTMLElement;
+        console.log('[UAM Form Filler] Found "Add Image" element (not near Thumbnail, assuming Ad Image)');
+        break;
+      }
+    }
+  }
+  
+  if (!adImageElement) {
+    console.log('[UAM Form Filler] "Add Image" element for Ad Image not found - Ad Image already exists, skipping image upload');
     return false;
   }
   
-  console.log('[UAM Form Filler] Found "Add Image" span, clicking it...');
-  (addImageSpan as HTMLElement).click();
+  console.log('[UAM Form Filler] Found "Add Image" element for Ad Image (no image present), proceeding with upload...');
+  adImageElement.click();
   
   // Wait for the upload dialog/modal to appear
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -2390,6 +2457,7 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
 
   const errors: string[] = [];
   const successes: string[] = [];
+  const skippedFields: string[] = [];
 
   // Fields to skip - these are automatically filled and shouldn't be touched
   const skipFields = ['account', 'account_id', 'accountId', 'account-id'];
@@ -2398,9 +2466,65 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
     // Skip account-related fields - they're automatically filled
     if (skipFields.some(skipField => key.toLowerCase().includes(skipField.toLowerCase()))) {
       console.log(`[UAM Form Filler] Skipping field "${key}" - account fields are automatically filled`);
+      skippedFields.push(key);
       return;
     }
     
+    // Check if field already has a value before attempting to fill
+    const element = findInputByName(key);
+    if (element) {
+      const currentValue = getFieldValue(element);
+      console.log(`[UAM Form Filler] Field "${key}" current value: "${currentValue}"`);
+      
+      // Special handling for objectiveType - check visible dropdown state
+      if (key === 'objectiveType' || key === 'objective' || key === 'objective_type') {
+        const input = element as HTMLInputElement;
+        if (input.type === 'hidden') {
+          // Check hidden input value
+          const hiddenValue = input.value?.trim() || '';
+          if (hiddenValue && hiddenValue !== '') {
+            console.log(`[UAM Form Filler] Field "${key}" already has value in hidden input: "${hiddenValue}", skipping`);
+            skippedFields.push(key);
+            return;
+          }
+          
+          // Check visible dropdown state
+          const modal = input.closest('#create-modal') || document.querySelector('#create-modal');
+          const searchScope = modal || document;
+          const reactSelectInputs = searchScope.querySelectorAll('.react-select__input[role="combobox"]');
+          for (const reactSelectInput of Array.from(reactSelectInputs)) {
+            const container = reactSelectInput.closest('.react-select__control');
+            if (container) {
+              const label = container.closest('div')?.querySelector('label');
+              const labelText = label?.textContent?.toLowerCase() || '';
+              if (labelText.includes('objective') || labelText.includes('goal')) {
+                const singleValue = container.querySelector('.react-select__single-value');
+                if (singleValue) {
+                  const selectedText = singleValue.textContent?.trim() || '';
+                  if (selectedText && selectedText !== '' && selectedText.toLowerCase() !== 'select' && selectedText.toLowerCase() !== 'choose') {
+                    console.log(`[UAM Form Filler] Field "${key}" already has selected value in dropdown: "${selectedText}", skipping`);
+                    skippedFields.push(key);
+                    return;
+                  }
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // For other fields, check if empty or default
+      const isEmpty = isEmptyOrDefault(currentValue, key);
+      console.log(`[UAM Form Filler] Field "${key}" isEmptyOrDefault: ${isEmpty}`);
+      if (!isEmpty) {
+        console.log(`[UAM Form Filler] Field "${key}" already has value: "${currentValue}", skipping`);
+        skippedFields.push(key);
+        return;
+      }
+    }
+    
+    // Field is empty or default, proceed to fill it
     const success = findAndSetInput(key, value);
     if (success) {
       successes.push(key);
@@ -2415,6 +2539,12 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
     const errorMsg = `Failed to set fields: ${errors.join(', ')}. Successfully set: ${successes.join(', ')}`;
     return { success: false, error: errorMsg };
   }
+
+  // Handle image upload for ad forms (create modal)
+  console.log('[UAM Form Filler] Checking if image upload is needed for ad...');
+  uploadImageIfNeeded().catch(err => {
+    console.error('[UAM Form Filler] Error uploading image:', err);
+  });
 
   console.log('[UAM Form Filler] Form filled successfully');
   console.log('[UAM Form Filler] Final Form Data:', formData);
