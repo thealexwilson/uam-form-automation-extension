@@ -1,4 +1,13 @@
+// Account field names that should never be touched
+const ACCOUNT_FIELD_NAMES = ['account', 'account_id', 'accountid', 'account-id', 'ad_account', 'adAccount', 'ad-account'];
+
 function findInputByName(name: string, searchInModal: boolean = true): HTMLElement | null {
+  // Never search for account-related fields - they're automatically filled
+  if (ACCOUNT_FIELD_NAMES.some((accField: string) => name.toLowerCase().includes(accField.toLowerCase()))) {
+    console.log(`[UAM Form Filler] Skipping search for account field: "${name}"`);
+    return null;
+  }
+  
   const selectors = [
     `input[name="${name}"]`,
     `select[name="${name}"]`,
@@ -16,6 +25,21 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
   for (const selector of selectors) {
     const element = searchScope.querySelector(selector);
     if (element) {
+      // Double-check: don't return account fields even if matched
+      const elementName = (element as HTMLElement).getAttribute('name') || (element as HTMLElement).id || '';
+      const elementNameLower = elementName.toLowerCase();
+      if (ACCOUNT_FIELD_NAMES.some((accField: string) => elementNameLower.includes(accField.toLowerCase()))) {
+        console.log(`[UAM Form Filler] Skipping account field match: "${elementName}"`);
+        continue;
+      }
+      
+      // Also check if the element's parent or nearby elements indicate it's an account field
+      const parentText = element.parentElement?.textContent?.toLowerCase() || '';
+      if (parentText.includes('ad account') && !parentText.includes('profile')) {
+        console.log(`[UAM Form Filler] Skipping account field based on parent context: "${elementName}"`);
+        continue;
+      }
+      
       console.log(`[UAM Form Filler] Found input for "${name}" using selector: ${selector}`);
       return element as HTMLElement;
     }
@@ -134,19 +158,22 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
   
   if (name === 'profile') {
     console.log(`[UAM Form Filler] Searching for profile...`);
-    // Direct search for profile_id field
+    // Direct search for profile_id field (but not account fields)
     const profileIdInput = searchScope.querySelector('input[name="profile_id"]');
     if (profileIdInput) {
-      console.log(`[UAM Form Filler] Found input for "${name}" using "profile_id" field`);
-      return profileIdInput as HTMLElement;
+      const elementName = profileIdInput.getAttribute('name')?.toLowerCase() || '';
+      if (!ACCOUNT_FIELD_NAMES.some((accField: string) => elementName.includes(accField))) {
+        console.log(`[UAM Form Filler] Found input for "${name}" using "profile_id" field`);
+        return profileIdInput as HTMLElement;
+      } else {
+        console.log(`[UAM Form Filler] Skipping account field matched as profile_id`);
+      }
     }
     
     const alternatives = [
       'profile_id',
       'profileId',
       'profile-id',
-      'account',
-      'account_id',
     ];
     
     for (const altName of alternatives) {
@@ -154,6 +181,12 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
         const altSelector = selector.replace(name, altName);
         const element = searchScope.querySelector(altSelector);
         if (element) {
+          // Double-check: don't return account fields
+          const elementName = (element as HTMLElement).getAttribute('name')?.toLowerCase() || '';
+          if (ACCOUNT_FIELD_NAMES.some((accField: string) => elementName.includes(accField))) {
+            console.log(`[UAM Form Filler] Skipping account field matched as profile: "${elementName}"`);
+            continue;
+          }
           console.log(`[UAM Form Filler] Found input for "${name}" using alternative name "${altName}" with selector: ${altSelector}`);
           return element as HTMLElement;
         }
@@ -307,8 +340,6 @@ function findInputByName(name: string, searchInModal: boolean = true): HTMLEleme
       'profile_id',
       'profileId',
       'profile-id',
-      'account',
-      'account_id',
     ];
     
     for (const altName of alternatives) {
@@ -852,6 +883,53 @@ function setInputValue(element: HTMLElement, value: any): boolean {
       const input = element as HTMLInputElement;
       
       if (inputType === 'hidden') {
+        // For objectiveType, check visible dropdown state BEFORE attempting to set it
+        if (input.name === 'objectiveType' || input.name === 'objective' || input.name === 'objective_type') {
+          // First check hidden input
+          const originalValue = input.value?.trim() || '';
+          if (originalValue && originalValue !== '') {
+            console.log(`[UAM Form Filler] ✗ Skipping objectiveType - hidden input already has value: "${originalValue}"`);
+            return true; // Return true to indicate success (value already set)
+          }
+          
+          // Then check visible dropdown state BEFORE setting hidden input
+          const modal = input.closest('#create-modal') || document.querySelector('#create-modal');
+          const searchScope = modal || document;
+          
+          // Look for objective-related react-select dropdowns
+          const reactSelectInputs = searchScope.querySelectorAll('.react-select__input[role="combobox"]');
+          for (const reactSelectInput of Array.from(reactSelectInputs)) {
+            const parentText = reactSelectInput.parentElement?.textContent?.toLowerCase() || '';
+            // Skip account fields
+            if (ACCOUNT_FIELD_NAMES.some((accField: string) => parentText.includes('ad account') && !parentText.includes('profile'))) {
+              continue;
+            }
+            
+            // Check if this is the objective dropdown
+            if (parentText.includes('objective') || parentText.includes('awareness') || parentText.includes('conversion') || parentText.includes('traffic')) {
+              const container = reactSelectInput.closest('.react-select__control') || reactSelectInput.closest('.react-select__input-container');
+              if (container) {
+                // Check if it already has a selected value
+                const singleValue = container.querySelector('.react-select__single-value');
+                if (singleValue) {
+                  const selectedText = singleValue.textContent?.trim() || '';
+                  if (selectedText && 
+                      selectedText !== '' && 
+                      selectedText.toLowerCase() !== 'select a campaign objective' &&
+                      selectedText.toLowerCase() !== 'select' &&
+                      (selectedText.toLowerCase().includes('awareness') || 
+                       selectedText.toLowerCase().includes('conversion') || 
+                       selectedText.toLowerCase().includes('traffic'))) {
+                    console.log(`[UAM Form Filler] ✗ Skipping objectiveType - dropdown already has selected value: "${selectedText}"`);
+                    return true; // Return true to indicate success (value already set)
+                  }
+                }
+                break; // Found the objective dropdown, no need to check others
+              }
+            }
+          }
+        }
+        
         // Handle object values properly - check if value property exists (even if empty string)
         let valueToSet: string;
         if (typeof value === 'object' && value !== null && 'value' in value) {
@@ -879,6 +957,54 @@ function setInputValue(element: HTMLElement, value: any): boolean {
           input.dispatchEvent(nativeEvent);
         }
         
+        // Never handle account fields - they're automatically filled
+        const inputName = input.name?.toLowerCase() || '';
+        if (ACCOUNT_FIELD_NAMES.some(accField => inputName.includes(accField))) {
+          console.log(`[UAM Form Filler] Skipping dropdown handling for account field: "${input.name}"`);
+          return true; // Return true to indicate "success" (we're intentionally skipping it)
+        }
+        
+        // For objectiveType, check visible dropdown state BEFORE we try to fill it
+        // This prevents us from trying to fill if it already has a value
+        if (input.name === 'objectiveType' || input.name === 'objective' || input.name === 'objective_type') {
+          // Try to find the visible dropdown to check its current state
+          const modal = input.closest('#create-modal') || document.querySelector('#create-modal');
+          const searchScope = modal || document;
+          
+          // Look for objective-related react-select dropdowns
+          const reactSelectInputs = searchScope.querySelectorAll('.react-select__input[role="combobox"]');
+          for (const reactSelectInput of Array.from(reactSelectInputs)) {
+            const parentText = reactSelectInput.parentElement?.textContent?.toLowerCase() || '';
+            // Skip account fields
+            if (ACCOUNT_FIELD_NAMES.some((accField: string) => parentText.includes('ad account') && !parentText.includes('profile'))) {
+              continue;
+            }
+            
+            // Check if this is the objective dropdown
+            if (parentText.includes('objective') || parentText.includes('awareness') || parentText.includes('conversion') || parentText.includes('traffic')) {
+              const container = reactSelectInput.closest('.react-select__control') || reactSelectInput.closest('.react-select__input-container');
+              if (container) {
+                // Check if it already has a selected value
+                const singleValue = container.querySelector('.react-select__single-value');
+                if (singleValue) {
+                  const selectedText = singleValue.textContent?.trim() || '';
+                  if (selectedText && 
+                      selectedText !== '' && 
+                      selectedText.toLowerCase() !== 'select a campaign objective' &&
+                      selectedText.toLowerCase() !== 'select' &&
+                      (selectedText.toLowerCase().includes('awareness') || 
+                       selectedText.toLowerCase().includes('conversion') || 
+                       selectedText.toLowerCase().includes('traffic'))) {
+                    console.log(`[UAM Form Filler] ✗ Skipping objectiveType - dropdown already has selected value: "${selectedText}"`);
+                    return true; // Return true to indicate success (value already set)
+                  }
+                }
+                break; // Found the objective dropdown, no need to check others
+              }
+            }
+          }
+        }
+        
         // Handle React Select dropdowns (objectiveType, postType, profile, callToAction, etc.)
         // Map actual field names to logical names for dropdown handling
         const dropdownFieldMap: Record<string, string> = {
@@ -893,6 +1019,13 @@ function setInputValue(element: HTMLElement, value: any): boolean {
         
         const logicalFieldName = dropdownFieldMap[input.name];
         if (logicalFieldName) {
+          // Double-check: never handle account fields
+          const inputNameLower = input.name?.toLowerCase() || '';
+          if (ACCOUNT_FIELD_NAMES.some(accField => inputNameLower.includes(accField))) {
+            console.log(`[UAM Form Filler] Skipping dropdown handling for account field: "${input.name}"`);
+            return true;
+          }
+          
           console.log(`[UAM Form Filler] Looking for visible dropdown component for ${input.name} (logical: ${logicalFieldName})...`);
           
           const findAndClickDropdown = () => {
@@ -903,15 +1036,80 @@ function setInputValue(element: HTMLElement, value: any): boolean {
             
             let visibleDropdown: HTMLElement | null = null;
             
-            const reactSelectInput = searchScope.querySelector('.react-select__input[role="combobox"]') as HTMLInputElement;
-            if (reactSelectInput) {
-              const container = reactSelectInput.closest('.react-select__input-container');
-              if (container) {
-                visibleDropdown = container as HTMLElement;
-                console.log(`[UAM Form Filler] Found react-select input container`);
-              } else {
-                visibleDropdown = reactSelectInput;
-                console.log(`[UAM Form Filler] Found react-select input`);
+            // First, try to find the dropdown associated with the hidden input we're filling
+            // Look for a react-select container near the hidden input
+            const inputParent = input.closest('div, form, section, fieldset');
+            if (inputParent) {
+              // Find react-select containers within the same parent
+              const nearbySelects = inputParent.querySelectorAll('.react-select__control, .react-select__input-container, [class*="react-select"]');
+              for (const selectEl of Array.from(nearbySelects)) {
+                const selectText = selectEl.textContent?.toLowerCase() || '';
+                const selectId = (selectEl as HTMLElement).id?.toLowerCase() || '';
+                
+                // Skip account fields
+                const isAccountField = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                  selectId.includes(accField) ||
+                  (selectText.includes('ad account') && !selectText.includes('profile'))
+                );
+                
+                if (isAccountField) {
+                  continue;
+                }
+                
+                // Check if this dropdown is related to the field we're looking for
+                const logicalNameLower = logicalFieldName.toLowerCase();
+                if (logicalFieldName === 'objectiveType') {
+                  // For objective, look for dropdowns that don't contain account-related text
+                  if (!selectText.includes('account') && (selectText.includes('objective') || selectText.includes('awareness') || selectText.includes('conversion') || selectText.includes('traffic'))) {
+                    visibleDropdown = selectEl as HTMLElement;
+                    console.log(`[UAM Form Filler] Found objective dropdown near hidden input`);
+                    break;
+                  }
+                } else if (selectText.includes(logicalNameLower) || selectEl === input.nextElementSibling || selectEl === input.previousElementSibling) {
+                  visibleDropdown = selectEl as HTMLElement;
+                  console.log(`[UAM Form Filler] Found dropdown near hidden input`);
+                  break;
+                }
+              }
+            }
+            
+            // If not found near input, search more broadly but exclude account fields
+            if (!visibleDropdown) {
+              const reactSelectInputs = searchScope.querySelectorAll('.react-select__input[role="combobox"]');
+              for (const reactSelectInput of Array.from(reactSelectInputs)) {
+                const inputEl = reactSelectInput as HTMLInputElement;
+                // Check if this input is associated with an account field
+                const inputId = inputEl.id?.toLowerCase() || '';
+                const inputName = inputEl.getAttribute('name')?.toLowerCase() || '';
+                const parentText = reactSelectInput.parentElement?.textContent?.toLowerCase() || '';
+                const isAccountField = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                  inputId.includes(accField) || 
+                  inputName.includes(accField) ||
+                  (parentText.includes('ad account') && !parentText.includes('profile'))
+                );
+                
+                if (isAccountField) {
+                  console.log(`[UAM Form Filler] Skipping account-related react-select input: id="${inputEl.id}", name="${inputName}"`);
+                  continue;
+                }
+                
+                // For objectiveType, check if this dropdown contains objective-related text
+                if (logicalFieldName === 'objectiveType') {
+                  if (!parentText.includes('objective') && !parentText.includes('awareness') && !parentText.includes('conversion') && !parentText.includes('traffic')) {
+                    continue; // Skip non-objective dropdowns
+                  }
+                }
+                
+                const container = reactSelectInput.closest('.react-select__input-container');
+                if (container) {
+                  visibleDropdown = container as HTMLElement;
+                  console.log(`[UAM Form Filler] Found react-select input container`);
+                  break;
+                } else {
+                  visibleDropdown = reactSelectInput as HTMLElement;
+                  console.log(`[UAM Form Filler] Found react-select input`);
+                  break;
+                }
               }
             }
             
@@ -932,11 +1130,27 @@ function setInputValue(element: HTMLElement, value: any): boolean {
               if (inputParent) {
                 for (const selector of selectors) {
                   const elements = inputParent.querySelectorAll(selector);
-                  if (elements.length > 0) {
-                    visibleDropdown = elements[0] as HTMLElement;
+                  for (const el of Array.from(elements)) {
+                    // Skip account-related dropdowns
+                    const elText = el.textContent?.toLowerCase() || '';
+                    const elId = (el as HTMLElement).id?.toLowerCase() || '';
+                    const elName = (el as HTMLElement).getAttribute('name')?.toLowerCase() || '';
+                    const isAccountField = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                      elId.includes(accField) || 
+                      elName.includes(accField) ||
+                      (elText.includes('ad account') && !elText.includes('profile'))
+                    );
+                    
+                    if (isAccountField) {
+                      console.log(`[UAM Form Filler] Skipping account-related dropdown: id="${elId}", name="${elName}"`);
+                      continue;
+                    }
+                    
+                    visibleDropdown = el as HTMLElement;
                     console.log(`[UAM Form Filler] Found visible dropdown near hidden input using selector: ${selector}`);
                     break;
                   }
+                  if (visibleDropdown) break;
                 }
               }
               
@@ -946,7 +1160,21 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                   const elements = searchScope.querySelectorAll(selector);
                   for (const el of Array.from(elements)) {
                     const text = el.textContent?.toLowerCase() || '';
+                    const elId = (el as HTMLElement).id?.toLowerCase() || '';
+                    const elName = (el as HTMLElement).getAttribute('name')?.toLowerCase() || '';
                     const logicalNameLower = logicalFieldName.toLowerCase();
+                    
+                    // Skip account-related dropdowns
+                    const isAccountField = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                      elId.includes(accField) || 
+                      elName.includes(accField) ||
+                      (text.includes('ad account') && !text.includes('profile'))
+                    );
+                    
+                    if (isAccountField) {
+                      continue;
+                    }
+                    
                     // Check if element is near the input or contains logical field name keywords
                     if (text.includes(logicalNameLower) || 
                         el === input.nextElementSibling || 
@@ -967,6 +1195,20 @@ function setInputValue(element: HTMLElement, value: any): boolean {
               const logicalNameLower = logicalFieldName.toLowerCase();
               for (const btn of Array.from(allButtons)) {
                 const btnText = btn.textContent?.toLowerCase() || '';
+                const btnId = (btn as HTMLElement).id?.toLowerCase() || '';
+                const btnName = (btn as HTMLElement).getAttribute('name')?.toLowerCase() || '';
+                
+                // Skip account-related buttons
+                const isAccountField = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                  btnId.includes(accField) || 
+                  btnName.includes(accField) ||
+                  (btnText.includes('ad account') && !btnText.includes('profile'))
+                );
+                
+                if (isAccountField) {
+                  continue;
+                }
+                
                 // For objectiveType, check for specific keywords; for others, check if near the input or contains field name
                 if ((logicalFieldName === 'objectiveType' && (btnText.includes('awareness') || btnText.includes('conversion') || btnText.includes('traffic') || btnText.includes('objective'))) ||
                     (logicalFieldName !== 'objectiveType' && (btnText.includes(logicalNameLower) || btn === input.nextElementSibling || btn === input.previousElementSibling))) {
@@ -978,9 +1220,31 @@ function setInputValue(element: HTMLElement, value: any): boolean {
             }
             
             if (visibleDropdown) {
+              // Final check: never open account dropdowns
+              const dropdownText = visibleDropdown.textContent?.toLowerCase() || '';
+              const dropdownId = visibleDropdown.id?.toLowerCase() || '';
+              const dropdownName = visibleDropdown.getAttribute('name')?.toLowerCase() || '';
+              const inputElement = visibleDropdown.querySelector('.react-select__input') as HTMLInputElement;
+              const inputId = inputElement?.id?.toLowerCase() || '';
+              const inputName = inputElement?.getAttribute('name')?.toLowerCase() || '';
+              
+              const isAccountField = ACCOUNT_FIELD_NAMES.some(accField => 
+                dropdownId.includes(accField) || 
+                dropdownName.includes(accField) ||
+                inputId.includes(accField) ||
+                inputName.includes(accField) ||
+                (dropdownText.includes('ad account') && !dropdownText.includes('profile'))
+              );
+              
+              if (isAccountField) {
+                console.log(`[UAM Form Filler] ✗ Skipping account dropdown - id="${dropdownId}", name="${dropdownName}", text="${dropdownText.substring(0, 50)}"`);
+                return false; // Return false to indicate we couldn't set the value
+              }
+              
+              // Note: We already checked the visible dropdown state BEFORE setting the hidden input value
+              // So we don't need to check again here - just proceed to open the dropdown
               console.log(`[UAM Form Filler] Opening dropdown...`);
               
-              const inputElement = visibleDropdown.querySelector('.react-select__input') as HTMLInputElement;
               if (inputElement) {
                 console.log(`[UAM Form Filler] Found react-select input element, attempting to open dropdown`);
                 
@@ -996,8 +1260,21 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                 
                 const container = inputElement.closest('.react-select__input-container') || inputElement.parentElement;
                 if (container) {
-                  console.log(`[UAM Form Filler] Also clicking container`);
-                  (container as HTMLElement).click();
+                  // Check if container is account-related before clicking
+                  const containerText = (container as HTMLElement).textContent?.toLowerCase() || '';
+                  const containerId = (container as HTMLElement).id?.toLowerCase() || '';
+                  const isAccountContainer = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                    containerId.includes(accField) ||
+                    (containerText.includes('ad account') && !containerText.includes('profile'))
+                  );
+                  
+                  if (!isAccountContainer) {
+                    console.log(`[UAM Form Filler] Also clicking container`);
+                    (container as HTMLElement).click();
+                  } else {
+                    console.log(`[UAM Form Filler] ✗ Skipping account container click`);
+                    return false;
+                  }
                 }
                 
                 setTimeout(() => {
@@ -1011,6 +1288,21 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                   inputElement.dispatchEvent(keyDownEvent);
                 }, 50);
               } else {
+                // Final check before clicking dropdown directly
+                const finalCheckText = visibleDropdown.textContent?.toLowerCase() || '';
+                const finalCheckId = visibleDropdown.id?.toLowerCase() || '';
+                const finalCheckName = visibleDropdown.getAttribute('name')?.toLowerCase() || '';
+                const isAccountFieldFinal = ACCOUNT_FIELD_NAMES.some((accField: string) => 
+                  finalCheckId.includes(accField) || 
+                  finalCheckName.includes(accField) ||
+                  (finalCheckText.includes('ad account') && !finalCheckText.includes('profile'))
+                );
+                
+                if (isAccountFieldFinal) {
+                  console.log(`[UAM Form Filler] ✗ Skipping account dropdown click - id="${finalCheckId}", name="${finalCheckName}"`);
+                  return false;
+                }
+                
                 console.log(`[UAM Form Filler] No input element found, clicking container`);
                 visibleDropdown.click();
               }
@@ -1293,6 +1585,7 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                         elementToBlur = document.querySelector('.react-select__input[id*="react-select"]') as HTMLInputElement;
                       }
                       
+                      // Close the dropdown using multiple methods
                       if (elementToBlur) {
                         console.log(`[UAM Form Filler] Blurring dropdown input to close menu`);
                         elementToBlur.blur();
@@ -1313,19 +1606,17 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                         if (container) {
                           (container as HTMLElement).blur();
                         }
-                      } else {
-                        // Fallback: click outside the dropdown to close it
-                        console.log(`[UAM Form Filler] Input element not found, clicking outside to close dropdown`);
-                        if (visibleDropdown) {
-                          const clickOutsideEvent = new MouseEvent('mousedown', {
-                            bubbles: true,
-                            cancelable: true,
-                            view: window
-                          });
-                          document.body.dispatchEvent(clickOutsideEvent);
-                        }
                       }
-                    }, 150);
+                      
+                      // Always click outside to ensure dropdown closes (most reliable method)
+                      setTimeout(() => {
+                        console.log(`[UAM Form Filler] Clicking outside dropdown to ensure it closes`);
+                        const modal = document.querySelector('#create-modal');
+                        const backdrop = modal?.parentElement || document.body;
+                        backdrop.click();
+                        document.body.click();
+                      }, 100);
+                    }, 200);
                     
                     return;
                   } else {
@@ -1352,7 +1643,7 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                           console.log(`[UAM Form Filler] Hidden input value after click: ${hiddenInput.value}`);
                         }
                         
-                        // Close the dropdown
+                        // Close the dropdown using multiple methods
                         let elementToBlur = inputElement;
                         if (!elementToBlur && visibleDropdown) {
                           elementToBlur = visibleDropdown.querySelector('.react-select__input') as HTMLInputElement;
@@ -1376,7 +1667,15 @@ function setInputValue(element: HTMLElement, value: any): boolean {
                             (container as HTMLElement).blur();
                           }
                         }
-                      }, 150);
+                        
+                        // Also click outside to ensure dropdown closes
+                        setTimeout(() => {
+                          const modal = document.querySelector('#create-modal');
+                          const backdrop = modal?.parentElement || document.body;
+                          backdrop.click();
+                          document.body.click();
+                        }, 100);
+                      }, 200);
                       
                       return;
                     }
@@ -1821,46 +2120,54 @@ function findAndSetInput(name: string, value: any): boolean {
     console.log(`[UAM Form Filler] objectiveType not found as standard input, trying custom dropdown...`);
     const modal = document.querySelector('#create-modal');
     if (modal) {
-      const labels = Array.from(modal.querySelectorAll('label, div, span')).filter(el => {
-        const text = el.textContent?.toLowerCase() || '';
-        return (text.includes('objective') || text.includes('goal')) && 
-               (el.tagName === 'LABEL' || el.classList.toString().includes('label'));
-      });
-      
-      console.log(`[UAM Form Filler] Found ${labels.length} potential objective labels`);
-      
-      for (const label of labels) {
-        console.log(`[UAM Form Filler] Checking label: ${label.textContent?.trim()}`);
-        
-        let associatedInput = label.querySelector('input, select, [role="combobox"], [role="listbox"]');
-        if (!associatedInput && label.getAttribute('for')) {
-          associatedInput = document.querySelector(`#${label.getAttribute('for')}`);
-        }
-        if (!associatedInput) {
-          associatedInput = label.nextElementSibling as HTMLElement;
-        }
-        if (!associatedInput && label.parentElement) {
-          associatedInput = label.parentElement.querySelector('input, select, [role="combobox"], [role="listbox"]') as HTMLElement;
-        }
-        
-        if (associatedInput) {
-          console.log(`[UAM Form Filler] Found objectiveType via label: ${label.textContent?.trim()}, element: ${associatedInput.tagName}`);
-          element = associatedInput as HTMLElement;
-          break;
-        }
-      }
-      
-      if (!element) {
-        console.log(`[UAM Form Filler] Trying to find by text content...`);
-        const allElements = modal.querySelectorAll('*');
-        for (const el of Array.from(allElements)) {
+      // First, try to find hidden input for objective
+      const hiddenObjectiveInput = modal.querySelector('input[name="objective"], input[name="objective_type"], input[name="campaignObjective"], input[name="campaign_objective"]') as HTMLInputElement;
+      if (hiddenObjectiveInput) {
+        console.log(`[UAM Form Filler] Found hidden objective input: ${hiddenObjectiveInput.name}`);
+        element = hiddenObjectiveInput;
+      } else {
+        // Try to find by label
+        const labels = Array.from(modal.querySelectorAll('label, div, span')).filter(el => {
           const text = el.textContent?.toLowerCase() || '';
-          if (text.includes('awareness') || text.includes('conversion') || text.includes('traffic')) {
-            const parent = el.closest('[role="combobox"], [role="listbox"], .select, [class*="select"], [class*="dropdown"]');
-            if (parent) {
-              console.log(`[UAM Form Filler] Found potential dropdown container`);
-              element = parent as HTMLElement;
-              break;
+          return (text.includes('objective') || text.includes('goal')) && 
+                 (el.tagName === 'LABEL' || el.classList.toString().includes('label'));
+        });
+        
+        console.log(`[UAM Form Filler] Found ${labels.length} potential objective labels`);
+        
+        for (const label of labels) {
+          console.log(`[UAM Form Filler] Checking label: ${label.textContent?.trim()}`);
+          
+          let associatedInput = label.querySelector('input, select, [role="combobox"], [role="listbox"]');
+          if (!associatedInput && label.getAttribute('for')) {
+            associatedInput = document.querySelector(`#${label.getAttribute('for')}`);
+          }
+          if (!associatedInput) {
+            associatedInput = label.nextElementSibling as HTMLElement;
+          }
+          if (!associatedInput && label.parentElement) {
+            associatedInput = label.parentElement.querySelector('input, select, [role="combobox"], [role="listbox"]') as HTMLElement;
+          }
+          
+          if (associatedInput) {
+            console.log(`[UAM Form Filler] Found objectiveType via label: ${label.textContent?.trim()}, element: ${associatedInput.tagName}`);
+            element = associatedInput as HTMLElement;
+            break;
+          }
+        }
+        
+        if (!element) {
+          console.log(`[UAM Form Filler] Trying to find by text content...`);
+          const allElements = modal.querySelectorAll('*');
+          for (const el of Array.from(allElements)) {
+            const text = el.textContent?.toLowerCase() || '';
+            if (text.includes('awareness') || text.includes('conversion') || text.includes('traffic')) {
+              const parent = el.closest('[role="combobox"], [role="listbox"], .select, [class*="select"], [class*="dropdown"]');
+              if (parent) {
+                console.log(`[UAM Form Filler] Found potential dropdown container`);
+                element = parent as HTMLElement;
+                break;
+              }
             }
           }
         }
@@ -2084,7 +2391,16 @@ export function fillForm(formData: Record<string, any>): { success: boolean; err
   const errors: string[] = [];
   const successes: string[] = [];
 
+  // Fields to skip - these are automatically filled and shouldn't be touched
+  const skipFields = ['account', 'account_id', 'accountId', 'account-id'];
+  
   Object.entries(filteredFormData).forEach(([key, value]) => {
+    // Skip account-related fields - they're automatically filled
+    if (skipFields.some(skipField => key.toLowerCase().includes(skipField.toLowerCase()))) {
+      console.log(`[UAM Form Filler] Skipping field "${key}" - account fields are automatically filled`);
+      return;
+    }
+    
     const success = findAndSetInput(key, value);
     if (success) {
       successes.push(key);
